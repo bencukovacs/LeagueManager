@@ -1,0 +1,24 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LeagueManager.Api", "LeagueManager.Api.csproj", "{6DC31142-48ED-3D0F-4B75-5ECF26C963D0}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6DC31142-48ED-3D0F-4B75-5ECF26C963D0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6DC31142-48ED-3D0F-4B75-5ECF26C963D0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6DC31142-48ED-3D0F-4B75-5ECF26C963D0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6DC31142-48ED-3D0F-4B75-5ECF26C963D0}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {7089E2AC-A051-4A33-9E68-E23CDCC2A016}
+	EndGlobalSection
+EndGlobal
