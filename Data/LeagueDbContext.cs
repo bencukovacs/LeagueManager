@@ -11,6 +11,8 @@ public class LeagueDbContext : DbContext
     public DbSet<Player> Players { get; set; }
     public DbSet<Fixture> Fixtures { get; set; }
     public DbSet<Location> Locations { get; set; }
+    public DbSet<Result> Results { get; set; }
+    public DbSet<Goal> Goals { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -22,7 +24,7 @@ public class LeagueDbContext : DbContext
             .HasForeignKey(f => f.HomeTeamId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        
+
         modelBuilder.Entity<Fixture>()
             .HasOne(f => f.AwayTeam)
             .WithMany()
