@@ -21,7 +21,8 @@ public class LocationsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<Location>>> GetLocations()
     {
-        return await _context.Locations.ToListAsync();
+        var locations = await _context.Locations.ToListAsync();
+        return Ok(locations);
     }
 
     // GET: api/locations/5
@@ -35,7 +36,7 @@ public class LocationsController : ControllerBase
             return NotFound();
         }
 
-        return location;
+        return Ok(location);
     }
 
     // POST: api/locations

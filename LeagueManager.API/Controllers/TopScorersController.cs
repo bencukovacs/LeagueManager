@@ -1,15 +1,15 @@
 using LeagueManager.API.Services;
 using Microsoft.AspNetCore.Mvc;
 
-namespace LeagueManager.Controllers;
+namespace LeagueManager.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
 public class TopScorersController : ControllerBase
 {
-    private readonly TopScorersService _topScorersService;
+    private readonly ITopScorersService _topScorersService;
 
-    public TopScorersController(TopScorersService topScorersService)
+    public TopScorersController(ITopScorersService topScorersService)
     {
         _topScorersService = topScorersService;
     }

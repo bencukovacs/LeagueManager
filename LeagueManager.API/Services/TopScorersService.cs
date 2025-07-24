@@ -16,7 +16,6 @@ public class TopScorersService : ITopScorersService
 
     public async Task<IEnumerable<TopScorerDto>> GetTopScorersAsync()
     {
-        // We only want to count goals from fixtures that have an approved result
         var topScorers = await _context.Goals
             .Where(g => g.Fixture != null && g.Fixture.Result != null && g.Fixture.Result.Status == ResultStatus.Approved)
             .GroupBy(g => new { g.PlayerId, g.Player!.Name, TeamName = g.Player.Team!.Name })
