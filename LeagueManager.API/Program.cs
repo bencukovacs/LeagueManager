@@ -9,6 +9,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<LeagueDbContext>(options => options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddControllers();
 builder.Services.AddScoped<ILeagueTableService, LeagueTableService>();
+builder.Services.AddScoped<ITopScorersService, TopScorersService>();
 
 var app = builder.Build();
 

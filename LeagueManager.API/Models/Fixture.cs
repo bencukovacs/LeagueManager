@@ -26,4 +26,6 @@ public class Fixture
 
     public int? LocationId { get; set; }
     public Location? Location { get; set; }
+
+    public Result? Result { get; set; }
 }

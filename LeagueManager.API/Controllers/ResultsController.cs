@@ -27,22 +27,19 @@ public class ResultsController : ControllerBase
             return NotFound("Fixture not found.");
         }
 
-        // Validation Check #1: Ensure a result doesn't already exist
         if (await _context.Results.AnyAsync(r => r.FixtureId == fixtureId))
         {
             return BadRequest("A result for this fixture has already been submitted.");
         }
 
-        // Validation Check #2: Ensure the score matches the number of goalscorers
         var totalGoals = resultDto.Goalscorers.Count;
         if (totalGoals != resultDto.HomeScore + resultDto.AwayScore)
         {
             return BadRequest("The number of goalscorers does not match the total score.");
         }
 
-        // Validation Check #3: Ensure all goalscorer IDs are valid players for the teams in the fixture
         var playerIds = resultDto.Goalscorers.Select(g => g.PlayerId).ToList();
-        if (playerIds.Any()) // Only check if there are any goalscorers
+        if (playerIds.Any())
         {
             var validPlayersCount = await _context.Players
                 .CountAsync(p => playerIds.Contains(p.Id) && (p.TeamId == fixture.HomeTeamId || p.TeamId == fixture.AwayTeamId));
@@ -53,7 +50,6 @@ public class ResultsController : ControllerBase
             }
         }
 
-        // This part remains the same, but now it's protected by the validation above
         await using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
@@ -82,7 +78,6 @@ public class ResultsController : ControllerBase
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
             
-            // Return the full result object on success
             return Ok(result);
         }
         catch (Exception)
@@ -103,10 +98,9 @@ public class ResultsController : ControllerBase
             return NotFound("Result not found.");
         }
 
-        // Update the status and save the change
         result.Status = statusDto.Status;
         await _context.SaveChangesAsync();
 
-        return NoContent(); // Indicates success with no content to return
+        return NoContent(); 
     }
 }
