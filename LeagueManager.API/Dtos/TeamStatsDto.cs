@@ -1,4 +1,4 @@
-namespace LeagueManager.Dtos;
+namespace LeagueManager.API.Dtos;
 
 public class TeamStatsDto
 {

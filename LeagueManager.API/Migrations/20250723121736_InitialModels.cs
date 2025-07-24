@@ -4,7 +4,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace LeagueManager.Api.Migrations
+namespace LeagueManager.API.Migrations
 {
     /// <inheritdoc />
     public partial class InitialModels : Migration

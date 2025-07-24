@@ -1,6 +1,6 @@
-using LeagueManager.Dtos;
+using LeagueManager.API.Dtos;
 
-namespace LeagueManager.Services;
+namespace LeagueManager.API.Services;
 
 public interface ILeagueTableService
 {

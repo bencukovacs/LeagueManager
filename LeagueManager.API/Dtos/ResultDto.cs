@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
+using LeagueManager.API.Models;
 
-namespace LeagueManager.Dtos;
+namespace LeagueManager.API.Dtos;
 
 public class GoalscorerDto
 {
@@ -19,4 +20,10 @@ public class SubmitResultDto
     public int AwayScore { get; set; }
 
     public List<GoalscorerDto> Goalscorers { get; set; } = new();
+}
+
+public class UpdateResultStatusDto
+{
+  [Required]
+  public ResultStatus Status { get; set; }
 }

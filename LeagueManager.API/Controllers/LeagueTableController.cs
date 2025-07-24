@@ -1,7 +1,7 @@
-using LeagueManager.Services;
+using LeagueManager.API.Services;
 using Microsoft.AspNetCore.Mvc;
 
-namespace LeagueManager.Controllers;
+namespace LeagueManager.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]

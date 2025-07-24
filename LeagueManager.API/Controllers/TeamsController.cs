@@ -1,10 +1,10 @@
-using LeagueManager.Data;
-using LeagueManager.Dtos;
-using LeagueManager.Models;
+using LeagueManager.API.Data;
+using LeagueManager.API.Dtos;
+using LeagueManager.API.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace LeagueManager.Controllers;
+namespace LeagueManager.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]

@@ -1,7 +1,7 @@
-using LeagueManager.Models;
+using LeagueManager.API.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace LeagueManager.Data;
+namespace LeagueManager.API.Data;
 
 public class LeagueDbContext : DbContext
 {

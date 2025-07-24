@@ -1,10 +1,10 @@
-using LeagueManager.Data;
-using LeagueManager.Dtos;
-using LeagueManager.Models;
+using LeagueManager.API.Data;
+using LeagueManager.API.Dtos;
+using LeagueManager.API.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace LeagueManager.Controllers;
+namespace LeagueManager.API.Controllers;
 
 [ApiController]
 [Route("api/fixtures/{fixtureId}/results")]
@@ -35,7 +35,7 @@ public class ResultsController : ControllerBase
         {
             return BadRequest("A result has already been submitted for this fixture.");
         }
-        
+
         await using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
@@ -47,7 +47,7 @@ public class ResultsController : ControllerBase
                 Status = ResultStatus.PendingApproval
             };
             _context.Results.Add(result);
-            
+
             foreach (var goalscorer in resultDto.Goalscorers)
             {
                 var goal = new Goal
@@ -72,5 +72,23 @@ public class ResultsController : ControllerBase
             await transaction.RollbackAsync();
             return StatusCode(500, "An error occurred while submitting the result.");
         }
+    }
+    
+    // PATCH: api/results/5/status
+    [HttpPatch("results/{resultId}/status")]
+    public async Task<IActionResult> UpdateResultStatus(int resultId, [FromBody] UpdateResultStatusDto statusDto)
+    {
+        var result = await _context.Results.FindAsync(resultId);
+
+        if (result == null)
+        {
+            return NotFound("Result not found.");
+        }
+
+        // Update the status and save the change
+        result.Status = statusDto.Status;
+        await _context.SaveChangesAsync();
+
+        return NoContent(); // Indicates success with no content to return
     }
 }

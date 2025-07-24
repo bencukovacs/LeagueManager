@@ -1,9 +1,9 @@
-using LeagueManager.Data;
-using LeagueManager.Dtos;
-using LeagueManager.Models;
+using LeagueManager.API.Data;
+using LeagueManager.API.Dtos;
+using LeagueManager.API.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace LeagueManager.Services;
+namespace LeagueManager.API.Services;
 
 public class LeagueTableService : ILeagueTableService
 {

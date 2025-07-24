@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace LeagueManager.Models;
+namespace LeagueManager.API.Models;
 
 public enum ResultStatus
 {

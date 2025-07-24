@@ -1,4 +1,4 @@
-namespace LeagueManager.Models;
+namespace LeagueManager.API.Models;
 
 public class Location
 {

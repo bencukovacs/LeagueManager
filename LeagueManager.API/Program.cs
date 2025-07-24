@@ -1,6 +1,6 @@
-using LeagueManager.Data;
+using LeagueManager.API.Data;
 using Microsoft.EntityFrameworkCore;
-using LeagueManager.Services;
+using LeagueManager.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
