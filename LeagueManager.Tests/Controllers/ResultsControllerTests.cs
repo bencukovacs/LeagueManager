@@ -1,75 +1,80 @@
 using LeagueManager.API.Controllers;
 using LeagueManager.Application.Dtos;
+using LeagueManager.Application.Services;
 using LeagueManager.Domain.Models;
-using LeagueManager.Infrastructure.Data;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore;
+using Moq;
 
 namespace LeagueManager.Tests.Controllers;
 
-public class ResultsControllerTests : IDisposable
+public class ResultsControllerTests
 {
-    private readonly SqliteConnection _connection;
-    private readonly DbContextOptions<LeagueDbContext> _options;
+    private readonly Mock<IResultService> _mockResultService;
+    private readonly ResultsController _controller;
 
     public ResultsControllerTests()
     {
-        _connection = new SqliteConnection("DataSource=:memory:");
-        _connection.Open();
-        _options = new DbContextOptionsBuilder<LeagueDbContext>()
-            .UseSqlite(_connection)
-            .Options;
-        using var context = new LeagueDbContext(_options);
-        context.Database.EnsureCreated();
-    }
-
-    private LeagueDbContext GetDbContext() => new LeagueDbContext(_options);
-
-    public void Dispose()
-    {
-        _connection.Close();
-        _connection.Dispose();
+        _mockResultService = new Mock<IResultService>();
+        _controller = new ResultsController(_mockResultService.Object);
     }
 
     [Fact]
-    public async Task UpdateResultStatus_WithValidData_ReturnsNoContent()
+    public async Task UpdateResultStatus_WithValidResultId_ReturnsNoContent()
     {
         // Arrange
-        await using var context = GetDbContext();
-        var team1 = new Team { Id = 1, Name = "Team A" };
-        var team2 = new Team { Id = 2, Name = "Team B" };
-        context.Teams.AddRange(team1, team2);
-        var fixture = new Fixture { Id = 1, HomeTeamId = 1, AwayTeamId = 2 };
-        context.Fixtures.Add(fixture);
-        var dbResult = new Result { Id = 1, FixtureId = 1, Status = ResultStatus.PendingApproval, HomeScore = 1, AwayScore = 0 };
-        context.Results.Add(dbResult);
-        await context.SaveChangesAsync();
-
-        var controller = new ResultsController(context);
-        var statusDto = new UpdateResultStatusDto { Status = ResultStatus.Approved };
+        var dto = new UpdateResultStatusDto { Status = ResultStatus.Approved };
+        _mockResultService
+            .Setup(service => service.UpdateResultStatusAsync(1, dto))
+            .ReturnsAsync(true);
 
         // Act
-        var result = await controller.UpdateResultStatus(1, statusDto);
+        var result = await _controller.UpdateResultStatus(1, dto);
 
         // Assert
         Assert.IsType<NoContentResult>(result);
-        var updatedResult = await context.Results.FindAsync(1);
-        Assert.Equal(ResultStatus.Approved, updatedResult?.Status);
     }
 
     [Fact]
     public async Task UpdateResultStatus_WithInvalidResultId_ReturnsNotFound()
     {
         // Arrange
-        await using var context = GetDbContext();
-        var controller = new ResultsController(context);
-        var statusDto = new UpdateResultStatusDto { Status = ResultStatus.Approved };
+        var dto = new UpdateResultStatusDto { Status = ResultStatus.Approved };
+        _mockResultService
+            .Setup(service => service.UpdateResultStatusAsync(99, dto))
+            .ReturnsAsync(false);
 
         // Act
-        var result = await controller.UpdateResultStatus(99, statusDto);
+        var result = await _controller.UpdateResultStatus(99, dto);
 
         // Assert
-        Assert.IsType<NotFoundObjectResult>(result);
+        var notFoundResult = Assert.IsType<NotFoundObjectResult>(result);
+        Assert.Equal("Result not found.", notFoundResult.Value);
+    }
+
+    [Fact]
+    public async Task UpdateResultStatus_CallsServiceWithCorrectParameters()
+    {
+        // Arrange
+        var dto = new UpdateResultStatusDto { Status = ResultStatus.Approved };
+
+        _mockResultService
+            .Setup(s => s.UpdateResultStatusAsync(It.IsAny<int>(), It.IsAny<UpdateResultStatusDto>()))
+            .ReturnsAsync(true);
+
+        // Act
+        await _controller.UpdateResultStatus(5, dto);
+
+        // Assert
+        _mockResultService.Verify(s => s.UpdateResultStatusAsync(5, dto), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateResultStatus_WithNullDto_ReturnsBadRequest()
+    {
+        // Act
+        var result = await _controller.UpdateResultStatus(1, null!);
+
+        // Assert
+        var badRequest = Assert.IsType<BadRequestResult>(result);
     }
 }

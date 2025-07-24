@@ -1,5 +1,5 @@
-using LeagueManager.Infrastructure.Data;
 using LeagueManager.Application.Dtos;
+using LeagueManager.Application.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LeagueManager.API.Controllers;
@@ -8,27 +8,28 @@ namespace LeagueManager.API.Controllers;
 [Route("api/[controller]")]
 public class ResultsController : ControllerBase
 {
-    private readonly LeagueDbContext _context;
+    private readonly IResultService _resultService;
 
-    public ResultsController(LeagueDbContext context)
+    public ResultsController(IResultService resultService)
     {
-        _context = context;
+        _resultService = resultService;
     }
-    
+
     // PATCH: api/results/5/status
-    [HttpPatch("results/{resultId}/status")]
+    [HttpPatch("{resultId}/status")]
     public async Task<IActionResult> UpdateResultStatus(int resultId, [FromBody] UpdateResultStatusDto statusDto)
     {
-        var result = await _context.Results.FindAsync(resultId);
+        if (statusDto == null)
+        {
+            return BadRequest();
+        }
 
-        if (result == null)
+        var updated = await _resultService.UpdateResultStatusAsync(resultId, statusDto);
+        if (!updated)
         {
             return NotFound("Result not found.");
         }
 
-        result.Status = statusDto.Status;
-        await _context.SaveChangesAsync();
-
-        return NoContent(); 
+        return NoContent();
     }
 }

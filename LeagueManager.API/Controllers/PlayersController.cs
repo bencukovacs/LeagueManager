@@ -1,8 +1,6 @@
-using LeagueManager.Infrastructure.Data;
 using LeagueManager.Application.Dtos;
-using LeagueManager.Domain.Models;
+using LeagueManager.Application.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace LeagueManager.API.Controllers;
 
@@ -10,113 +8,54 @@ namespace LeagueManager.API.Controllers;
 [Route("api/[controller]")]
 public class PlayersController : ControllerBase
 {
-  private readonly LeagueDbContext _context;
+    private readonly IPlayerService _playerService;
 
-  public PlayersController(LeagueDbContext context)
-  {
-    _context = context;
-  }
-
-  // GET: api/players
-  [HttpGet]
-  public async Task<ActionResult<IEnumerable<Player>>> GetPlayers()
-  {
-    var players = await _context.Players.Include(p => p.Team).ToListAsync();
-    return Ok(players);
-  }
-
-  // GET api/players/5
-  [HttpGet("{id}")]
-  public async Task<ActionResult<Player>> GetPlayer(int id)
-  {
-    var player = await _context.Players
-          .Include(p => p.Team)
-          .FirstOrDefaultAsync(p => p.Id == id);
-
-    if (player == null)
+    public PlayersController(IPlayerService playerService)
     {
-      return NotFound();
+        _playerService = playerService;
     }
 
-    return Ok(player);
-  }
-
-  // POST: api/players
-  [HttpPost]
-  public async Task<ActionResult<Player>> CreatePlayer([FromBody] PlayerDto playerDto)
-  {
-    var team = await _context.Teams.FindAsync(playerDto.TeamId);
-    if (team == null)
+    [HttpGet]
+    public async Task<IActionResult> GetPlayers()
     {
-      return BadRequest("Invalid Team ID.");
+        var players = await _playerService.GetAllPlayersAsync();
+        return Ok(players);
     }
 
-    var player = new Player
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetPlayer(int id)
     {
-      Name = playerDto.Name,
-      TeamId = playerDto.TeamId
-    };
-
-    _context.Players.Add(player);
-    await _context.SaveChangesAsync();
-
-    await _context.Entry(player).Reference(p => p.Team).LoadAsync();
-
-    return CreatedAtAction(nameof(GetPlayer), new { id = player.Id }, player);
-  }
-
-  // PUT api/players/5
-  [HttpPut("{id}")]
-  public async Task<IActionResult> UpdatePlayer(int id, [FromBody] PlayerDto playerDto)
-  {
-    var player = await _context.Players.FindAsync(id);
-    if (player == null)
-    {
-      return NotFound();
+        var player = await _playerService.GetPlayerByIdAsync(id);
+        if (player == null)
+        {
+            return NotFound();
+        }
+        return Ok(player);
     }
 
-    var teamExists = await _context.Teams.AnyAsync(t => t.Id == playerDto.TeamId);
-    if (!teamExists)
+    [HttpPost]
+    public async Task<IActionResult> CreatePlayer([FromBody] PlayerDto playerDto)
     {
-      return NotFound();
+        try
+        {
+            var newPlayer = await _playerService.CreatePlayerAsync(playerDto);
+            var createdPlayer = await _playerService.GetPlayerByIdAsync(newPlayer.Id);
+            return CreatedAtAction(nameof(GetPlayer), new { id = createdPlayer!.Id }, createdPlayer);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 
-    player.Name = playerDto.Name;
-    player.TeamId = playerDto.TeamId;
-
-    _context.Entry(player).State = EntityState.Modified;
-
-    try
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeletePlayer(int id)
     {
-      await _context.SaveChangesAsync();
+        var success = await _playerService.DeletePlayerAsync(id);
+        if (!success)
+        {
+            return NotFound();
+        }
+        return NoContent();
     }
-    catch (DbUpdateConcurrencyException)
-    {
-      if (!_context.Players.Any(e => e.Id == id))
-      {
-        return NotFound();
-      }
-      else
-      {
-        throw;
-      }
-    }
-    return NoContent();
-  }
-
-  // DELETE: api/players/5
-  [HttpDelete("{id}")]
-  public async Task<IActionResult> DeletePlayer(int id)
-  {
-    var player = await _context.Players.FindAsync(id);
-    if (player == null)
-    {
-      return NotFound();
-    }
-
-    _context.Players.Remove(player);
-    await _context.SaveChangesAsync();
-
-    return NoContent();
-  }
 }

@@ -1,153 +1,110 @@
+using Moq;
 using LeagueManager.API.Controllers;
-using LeagueManager.Infrastructure.Data;
+using LeagueManager.Application.Services;
 using LeagueManager.Application.Dtos;
 using LeagueManager.Domain.Models;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Data.Sqlite;
 
 namespace LeagueManager.Tests.Controllers;
 
-public class PlayersControllerTests : IDisposable
+public class PlayersControllerTests
 {
-    private readonly SqliteConnection _connection;
-    private readonly DbContextOptions<LeagueDbContext> _options;
+    private readonly Mock<IPlayerService> _mockPlayerService;
+    private readonly PlayersController _controller;
 
     public PlayersControllerTests()
     {
-        _connection = new SqliteConnection("DataSource=:memory:");
-        _connection.Open();
-
-        _options = new DbContextOptionsBuilder<LeagueDbContext>()
-            .UseSqlite(_connection)
-            .Options;
-
-        using var context = new LeagueDbContext(_options);
-        context.Database.EnsureCreated();
-    }
-
-    private LeagueDbContext GetDbContext() => new LeagueDbContext(_options);
-    
-    public void Dispose()
-    {
-        _connection.Close();
-        _connection.Dispose();
+        _mockPlayerService = new Mock<IPlayerService>();
+        _controller = new PlayersController(_mockPlayerService.Object);
     }
 
     [Fact]
-    public async Task GetPlayers_ReturnsOkResult_WithListOfPlayers()
+    public async Task GetPlayer_WhenPlayerExists_ReturnsOkResult()
     {
         // Arrange
-        await using var context = GetDbContext();
-        var team = new Team { Id = 1, Name = "Test Team" };
-        context.Teams.Add(team);
-        context.Players.Add(new Player { Name = "Player One", TeamId = 1 });
-        context.Players.Add(new Player { Name = "Player Two", TeamId = 1 });
-        await context.SaveChangesAsync();
-        
-        var controller = new PlayersController(context);
-
-        // Act
-        var result = await controller.GetPlayers();
-
-        // Assert
-        var okResult = Assert.IsType<OkObjectResult>(result.Result);
-        var players = Assert.IsAssignableFrom<IEnumerable<Player>>(okResult.Value);
-        Assert.Equal(2, players.Count());
-    }
-    
-    [Fact]
-    public async Task GetPlayer_WithExistingId_ReturnsOkResult_WithPlayer()
-    {
-        // Arrange
-        await using var context = GetDbContext();
-        var team = new Team { Id = 1, Name = "Test Team" };
-        context.Teams.Add(team);
         var player = new Player { Id = 1, Name = "Test Player", TeamId = 1 };
-        context.Players.Add(player);
-        await context.SaveChangesAsync();
-
-        var controller = new PlayersController(context);
+        _mockPlayerService.Setup(s => s.GetPlayerByIdAsync(1)).ReturnsAsync(player);
 
         // Act
-        var result = await controller.GetPlayer(1);
+        var result = await _controller.GetPlayer(1);
 
         // Assert
-        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        var okResult = Assert.IsType<OkObjectResult>(result);
         var returnedPlayer = Assert.IsType<Player>(okResult.Value);
         Assert.Equal(1, returnedPlayer.Id);
     }
-    
+
     [Fact]
-    public async Task GetPlayer_WithNonExistentId_ReturnsNotFound()
+    public async Task GetPlayer_WhenPlayerDoesNotExist_ReturnsNotFound()
     {
         // Arrange
-        await using var context = GetDbContext();
-        var controller = new PlayersController(context);
+        _mockPlayerService.Setup(s => s.GetPlayerByIdAsync(99)).ReturnsAsync((Player?)null);
 
         // Act
-        var result = await controller.GetPlayer(99);
+        var result = await _controller.GetPlayer(99);
 
         // Assert
-        Assert.IsType<NotFoundResult>(result.Result);
+        Assert.IsType<NotFoundResult>(result);
     }
-    
+
     [Fact]
     public async Task CreatePlayer_WithValidDto_ReturnsCreatedAtAction()
     {
         // Arrange
-        await using var context = GetDbContext();
-        var team = new Team { Id = 1, Name = "Test Team" };
-        context.Teams.Add(team);
-        await context.SaveChangesAsync();
-        
-        var controller = new PlayersController(context);
-        var createDto = new PlayerDto { Name = "New Player", TeamId = 1 };
+        var playerDto = new PlayerDto { Name = "New Player", TeamId = 1 };
+        var newPlayer = new Player { Id = 1, Name = "New Player", TeamId = 1 };
+        _mockPlayerService.Setup(s => s.CreatePlayerAsync(playerDto)).ReturnsAsync(newPlayer);
+        // We also need to mock the GetPlayerByIdAsync call that happens inside the action
+        _mockPlayerService.Setup(s => s.GetPlayerByIdAsync(newPlayer.Id)).ReturnsAsync(newPlayer);
 
         // Act
-        var result = await controller.CreatePlayer(createDto);
+        var result = await _controller.CreatePlayer(playerDto);
 
         // Assert
-        var createdAtActionResult = Assert.IsType<CreatedAtActionResult>(result.Result);
+        var createdAtActionResult = Assert.IsType<CreatedAtActionResult>(result);
         var createdPlayer = Assert.IsType<Player>(createdAtActionResult.Value);
         Assert.Equal("New Player", createdPlayer.Name);
-        Assert.Equal(1, await context.Players.CountAsync());
     }
-    
+
     [Fact]
     public async Task CreatePlayer_WithInvalidTeamId_ReturnsBadRequest()
     {
         // Arrange
-        await using var context = GetDbContext();
-        var controller = new PlayersController(context);
-        var createDto = new PlayerDto { Name = "New Player", TeamId = 99 }; // Invalid Team ID
+        var playerDto = new PlayerDto { Name = "New Player", TeamId = 99 };
+        _mockPlayerService.Setup(s => s.CreatePlayerAsync(playerDto))
+            .ThrowsAsync(new ArgumentException("Invalid Team ID."));
 
         // Act
-        var result = await controller.CreatePlayer(createDto);
+        var result = await _controller.CreatePlayer(playerDto);
 
         // Assert
-        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
         Assert.Equal("Invalid Team ID.", badRequestResult.Value);
     }
 
     [Fact]
-    public async Task DeletePlayer_WithExistingId_ReturnsNoContent()
+    public async Task DeletePlayer_WhenDeleteIsSuccessful_ReturnsNoContent()
     {
         // Arrange
-        await using var context = GetDbContext();
-        var team = new Team { Id = 1, Name = "Test Team" };
-        context.Teams.Add(team);
-        var player = new Player { Id = 1, Name = "Player to Delete", TeamId = 1 };
-        context.Players.Add(player);
-        await context.SaveChangesAsync();
-        
-        var controller = new PlayersController(context);
+        _mockPlayerService.Setup(s => s.DeletePlayerAsync(1)).ReturnsAsync(true);
 
         // Act
-        var result = await controller.DeletePlayer(1);
+        var result = await _controller.DeletePlayer(1);
 
         // Assert
         Assert.IsType<NoContentResult>(result);
-        Assert.Equal(0, await context.Players.CountAsync());
+    }
+
+    [Fact]
+    public async Task DeletePlayer_WhenPlayerDoesNotExist_ReturnsNotFound()
+    {
+        // Arrange
+        _mockPlayerService.Setup(s => s.DeletePlayerAsync(99)).ReturnsAsync(false);
+
+        // Act
+        var result = await _controller.DeletePlayer(99);
+
+        // Assert
+        Assert.IsType<NotFoundResult>(result);
     }
 }

@@ -14,6 +14,9 @@ builder.Services.AddScoped<ILeagueTableService, LeagueTableService>();
 builder.Services.AddScoped<ITopScorersService, TopScorersService>();
 builder.Services.AddScoped<ITeamService, TeamService>();
 builder.Services.AddScoped<IFixtureService, FixtureService>();
+builder.Services.AddScoped<IPlayerService, PlayerService>();
+builder.Services.AddScoped<ILocationService, LocationService>();
+builder.Services.AddScoped<IResultService, ResultService>();
 
 var app = builder.Build();
 
