@@ -25,6 +25,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\LeagueManager.API\LeagueManager.API.csproj" />
+    <ProjectReference Include="..\LeagueManager.Application\LeagueManager.Application.csproj" />
+    <ProjectReference Include="..\LeagueManager.Infrastructure\LeagueManager.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

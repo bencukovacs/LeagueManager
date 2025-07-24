@@ -1,6 +1,6 @@
-using LeagueManager.API.Data;
-using LeagueManager.API.Models;
-using LeagueManager.API.Services;
+using LeagueManager.Infrastructure.Data;
+using LeagueManager.Domain.Models;
+using LeagueManager.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace LeagueManager.Tests.Services;

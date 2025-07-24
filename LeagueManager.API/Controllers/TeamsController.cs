@@ -1,5 +1,5 @@
-using LeagueManager.API.Dtos;
-using LeagueManager.API.Services;
+using LeagueManager.Application.Dtos;
+using LeagueManager.Application.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LeagueManager.API.Controllers;

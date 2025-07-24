@@ -1,7 +1,7 @@
 using Moq;
 using LeagueManager.API.Controllers;
-using LeagueManager.API.Services;
-using LeagueManager.API.Dtos;
+using LeagueManager.Application.Services;
+using LeagueManager.Application.Dtos;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LeagueManager.Tests.Controllers;

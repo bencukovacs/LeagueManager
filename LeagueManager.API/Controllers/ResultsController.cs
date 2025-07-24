@@ -1,8 +1,6 @@
-using LeagueManager.API.Data;
-using LeagueManager.API.Dtos;
-using LeagueManager.API.Models;
+using LeagueManager.Infrastructure.Data;
+using LeagueManager.Application.Dtos;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace LeagueManager.API.Controllers;
 

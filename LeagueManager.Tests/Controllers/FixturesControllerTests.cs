@@ -1,220 +1,136 @@
+using Xunit;
+using Moq;
 using LeagueManager.API.Controllers;
-using LeagueManager.API.Data;
-using LeagueManager.API.Dtos;
-using LeagueManager.API.Models;
+using LeagueManager.Application.Services;
+using LeagueManager.Application.Dtos;
+using LeagueManager.Domain.Models;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Data.Sqlite;
+using System;
 
 namespace LeagueManager.Tests.Controllers;
 
-public class FixturesControllerTests : IDisposable
+public class FixturesControllerTests
 {
-    private readonly SqliteConnection _connection;
-    private readonly DbContextOptions<LeagueDbContext> _options;
+    private readonly Mock<IFixtureService> _mockFixtureService;
+    private readonly FixturesController _controller;
 
     public FixturesControllerTests()
     {
-        _connection = new SqliteConnection("DataSource=:memory:");
-        _connection.Open();
-
-        _options = new DbContextOptionsBuilder<LeagueDbContext>()
-            .UseSqlite(_connection)
-            .Options;
-
-        using var context = new LeagueDbContext(_options);
-        context.Database.EnsureCreated();
-    }
-
-    private LeagueDbContext GetDbContext() => new LeagueDbContext(_options);
-
-    public void Dispose()
-    {
-        _connection.Close();
-        _connection.Dispose();
-    }
-
-    private async Task SeedTeamsAndLocation(LeagueDbContext context)
-    {
-        context.Teams.AddRange(
-            new Team { Id = 1, Name = "Team One" },
-            new Team { Id = 2, Name = "Team Two" }
-        );
-        context.Locations.Add(new Location { Id = 1, Name = "Main Pitch" });
-        await context.SaveChangesAsync();
+        _mockFixtureService = new Mock<IFixtureService>();
+        _controller = new FixturesController(_mockFixtureService.Object);
     }
 
     [Fact]
-    public async Task GetFixtures_ReturnsOkResult_WithListOfFixtures()
+    public async Task GetFixture_WhenFixtureExists_ReturnsOkResult()
     {
         // Arrange
-        await using var context = GetDbContext();
-        await SeedTeamsAndLocation(context);
-        context.Fixtures.Add(new Fixture { HomeTeamId = 1, AwayTeamId = 2, KickOffDateTime = DateTime.UtcNow });
-        await context.SaveChangesAsync();
-
-        var controller = new FixturesController(context);
+        var fixture = new Fixture { Id = 1, HomeTeamId = 1, AwayTeamId = 2 };
+        _mockFixtureService.Setup(s => s.GetFixtureByIdAsync(1)).ReturnsAsync(fixture);
 
         // Act
-        var result = await controller.GetFixtures();
+        var result = await _controller.GetFixture(1);
 
         // Assert
-        var okResult = Assert.IsType<OkObjectResult>(result.Result);
-        var fixtures = Assert.IsAssignableFrom<IEnumerable<Fixture>>(okResult.Value);
-        Assert.Single(fixtures);
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var returnedFixture = Assert.IsType<Fixture>(okResult.Value);
+        Assert.Equal(1, returnedFixture.Id);
     }
 
     [Fact]
-    public async Task CreateFixture_WithValidData_ReturnsCreatedAtAction()
+    public async Task GetFixture_WhenFixtureDoesNotExist_ReturnsNotFound()
     {
         // Arrange
-        await using var context = GetDbContext();
-        await SeedTeamsAndLocation(context);
-        var controller = new FixturesController(context);
-        var createDto = new CreateFixtureDto
-        {
-            HomeTeamId = 1,
-            AwayTeamId = 2,
-            LocationId = 1,
-            KickOffDateTime = DateTime.UtcNow.AddDays(7)
-        };
+        _mockFixtureService.Setup(s => s.GetFixtureByIdAsync(99)).ReturnsAsync((Fixture?)null);
 
         // Act
-        var result = await controller.CreateFixture(createDto);
-
-        // Assert
-        var createdAtActionResult = Assert.IsType<CreatedAtActionResult>(result.Result);
-        var createdFixture = Assert.IsType<Fixture>(createdAtActionResult.Value);
-        Assert.Equal(1, createdFixture.HomeTeamId);
-        Assert.Equal(1, await context.Fixtures.CountAsync());
-    }
-
-    [Fact]
-    public async Task CreateFixture_WithSameHomeAndAwayTeam_ReturnsBadRequest()
-    {
-        // Arrange
-        await using var context = GetDbContext();
-        await SeedTeamsAndLocation(context);
-        var controller = new FixturesController(context);
-        var createDto = new CreateFixtureDto { HomeTeamId = 1, AwayTeamId = 1 }; // Same team
-
-        // Act
-        var result = await controller.CreateFixture(createDto);
-
-        // Assert
-        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
-        Assert.Equal("Home team and away team cannot be the same.", badRequestResult.Value);
-    }
-
-    [Fact]
-    public async Task CreateFixture_WithInvalidHomeTeamId_ReturnsBadRequest()
-    {
-        // Arrange
-        await using var context = GetDbContext();
-        await SeedTeamsAndLocation(context);
-        var controller = new FixturesController(context);
-        var createDto = new CreateFixtureDto { HomeTeamId = 99, AwayTeamId = 1 }; // Invalid home team
-
-        // Act
-        var result = await controller.CreateFixture(createDto);
-
-        // Assert
-        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
-        Assert.Equal("One or both teams do not exist.", badRequestResult.Value);
-    }
-
-    [Fact]
-    public async Task UpdateFixture_WithValidData_ReturnsNoContent()
-    {
-        // Arrange
-        await using var context = GetDbContext();
-        await SeedTeamsAndLocation(context);
-        var originalDate = DateTime.UtcNow;
-        var fixture = new Fixture { Id = 1, HomeTeamId = 1, AwayTeamId = 2, KickOffDateTime = originalDate, LocationId = 1 };
-        context.Fixtures.Add(fixture);
-        await context.SaveChangesAsync();
-
-        var controller = new FixturesController(context);
-        var newDate = DateTime.UtcNow.AddDays(1);
-        var updateDto = new UpdateFixtureDto { KickOffDateTime = newDate, LocationId = 1 };
-
-        // Act
-        var result = await controller.UpdateFixture(1, updateDto);
-
-        // Assert
-        Assert.IsType<NoContentResult>(result);
-        var updatedFixture = await context.Fixtures.FindAsync(1);
-        Assert.Equal(newDate, updatedFixture?.KickOffDateTime);
-    }
-
-    [Fact]
-    public async Task UpdateFixture_WithInvalidFixtureId_ReturnsNotFound()
-    {
-        // Arrange
-        await using var context = GetDbContext();
-        await SeedTeamsAndLocation(context);
-        var controller = new FixturesController(context);
-        var updateDto = new UpdateFixtureDto { KickOffDateTime = DateTime.UtcNow };
-
-        // Act
-        var result = await controller.UpdateFixture(99, updateDto);
+        var result = await _controller.GetFixture(99);
 
         // Assert
         Assert.IsType<NotFoundResult>(result);
     }
-    
+
     [Fact]
-    public async Task SubmitResult_WithValidData_ReturnsOkResult()
+    public async Task CreateFixture_WhenSuccessful_ReturnsCreatedAtAction()
     {
         // Arrange
-        await using var context = GetDbContext();
-        var team1 = new Team { Id = 1, Name = "Team A" };
-        var team2 = new Team { Id = 2, Name = "Team B" };
-        var player1 = new Player { Id = 1, TeamId = 1, Name = "Player 1" };
-        context.Teams.AddRange(team1, team2);
-        context.Players.Add(player1);
-        var fixture = new Fixture { Id = 1, HomeTeamId = 1, AwayTeamId = 2 };
-        context.Fixtures.Add(fixture);
-        await context.SaveChangesAsync();
-        
-        var controller = new FixturesController(context);
-        var submitDto = new SubmitResultDto
-        {
-            HomeScore = 1,
-            AwayScore = 0,
-            Goalscorers = new List<GoalscorerDto> { new() { PlayerId = 1 } }
-        };
+        var createDto = new CreateFixtureDto { HomeTeamId = 1, AwayTeamId = 2 };
+        var newFixture = new Fixture { Id = 1, HomeTeamId = 1, AwayTeamId = 2 };
+        var createdFixtureWithIncludes = new Fixture { Id = 1, HomeTeamId = 1, AwayTeamId = 2, HomeTeam = new Team { Name = "A" }, AwayTeam = new Team { Name = "B" } };
+
+        _mockFixtureService.Setup(s => s.CreateFixtureAsync(createDto)).ReturnsAsync(newFixture);
+        _mockFixtureService.Setup(s => s.GetFixtureByIdAsync(newFixture.Id)).ReturnsAsync(createdFixtureWithIncludes);
+
 
         // Act
-        var result = await controller.SubmitResult(1, submitDto);
+        var result = await _controller.CreateFixture(createDto);
 
         // Assert
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        var createdResult = Assert.IsType<Result>(okResult.Value);
-        Assert.Equal(ResultStatus.PendingApproval, createdResult.Status);
+        var createdAtActionResult = Assert.IsType<CreatedAtActionResult>(result);
+        Assert.Equal("GetFixture", createdAtActionResult.ActionName);
     }
 
     [Fact]
-    public async Task SubmitResult_WhenResultAlreadyExists_ReturnsBadRequest()
+    public async Task CreateFixture_WhenServiceThrowsArgumentException_ReturnsBadRequest()
     {
         // Arrange
-        await using var context = GetDbContext();
-        var team1 = new Team { Id = 1, Name = "Team A" };
-        var team2 = new Team { Id = 2, Name = "Team B" };
-        context.Teams.AddRange(team1, team2);
-        var fixture = new Fixture { Id = 1, HomeTeamId = 1, AwayTeamId = 2 };
-        context.Fixtures.Add(fixture);
-        context.Results.Add(new Result { FixtureId = 1, HomeScore = 1, AwayScore = 0 });
-        await context.SaveChangesAsync();
-
-        var controller = new FixturesController(context);
-        var submitDto = new SubmitResultDto();
+        var createDto = new CreateFixtureDto();
+        _mockFixtureService.Setup(s => s.CreateFixtureAsync(createDto))
+            .ThrowsAsync(new ArgumentException("Some error"));
 
         // Act
-        var result = await controller.SubmitResult(1, submitDto);
+        var result = await _controller.CreateFixture(createDto);
 
         // Assert
         var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
-        Assert.Equal("A result for this fixture has already been submitted.", badRequestResult.Value);
+        Assert.Equal("Some error", badRequestResult.Value);
+    }
+
+    [Fact]
+    public async Task SubmitResult_WhenSuccessful_ReturnsOkResult()
+    {
+        // Arrange
+        var submitDto = new SubmitResultDto();
+        var newResult = new Result { Id = 1, FixtureId = 1 };
+        _mockFixtureService.Setup(s => s.SubmitResultAsync(1, submitDto)).ReturnsAsync(newResult);
+
+        // Act
+        var result = await _controller.SubmitResult(1, submitDto);
+
+        // Assert
+        Assert.IsType<OkObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task SubmitResult_WhenFixtureNotFound_ReturnsNotFound()
+    {
+        // Arrange
+        var submitDto = new SubmitResultDto();
+        _mockFixtureService.Setup(s => s.SubmitResultAsync(99, submitDto))
+            .ThrowsAsync(new KeyNotFoundException("Fixture not found."));
+
+        // Act
+        var result = await _controller.SubmitResult(99, submitDto);
+
+        // Assert
+        var notFoundResult = Assert.IsType<NotFoundObjectResult>(result);
+        Assert.Equal("Fixture not found.", notFoundResult.Value);
+    }
+    
+    [Fact]
+    public async Task SubmitResult_WhenResultExists_ReturnsBadRequest()
+    {
+        // Arrange
+        var submitDto = new SubmitResultDto();
+        _mockFixtureService.Setup(s => s.SubmitResultAsync(1, submitDto))
+            .ThrowsAsync(new InvalidOperationException("Result exists."));
+
+        // Act
+        var result = await _controller.SubmitResult(1, submitDto);
+
+        // Assert
+        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal("Result exists.", badRequestResult.Value);
     }
 }

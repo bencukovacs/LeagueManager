@@ -1,4 +1,4 @@
-using LeagueManager.API.Services;
+using LeagueManager.Application.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LeagueManager.API.Controllers;

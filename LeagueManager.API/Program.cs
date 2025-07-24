@@ -1,6 +1,7 @@
-using LeagueManager.API.Data;
+using LeagueManager.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
-using LeagueManager.API.Services;
+using LeagueManager.Infrastructure.Services;
+using LeagueManager.Application.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,9 +9,11 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<LeagueDbContext>(options => options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddControllers();
+
 builder.Services.AddScoped<ILeagueTableService, LeagueTableService>();
 builder.Services.AddScoped<ITopScorersService, TopScorersService>();
 builder.Services.AddScoped<ITeamService, TeamService>();
+builder.Services.AddScoped<IFixtureService, FixtureService>();
 
 var app = builder.Build();
 
