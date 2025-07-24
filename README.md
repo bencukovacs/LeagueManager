@@ -18,7 +18,7 @@ This is the backend API for a web application designed to manage an amateur or c
 1.  **Prerequisites:** Make sure you have the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) and [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed.
 2.  **Clone Repository:**
     ```bash
-    git clone <your-repository-url>
+    git clone https://github.com/bencukovacs/LeagueManager/tree/main
     ```
 3.  **Configure Database:**
     * Navigate to the project root in your terminal.
