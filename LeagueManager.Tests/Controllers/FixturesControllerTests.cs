@@ -23,7 +23,7 @@ public class FixturesControllerTests : IDisposable
             .Options;
 
         using var context = new LeagueDbContext(_options);
-        context.Database.EnsureCreated();   
+        context.Database.EnsureCreated();
     }
 
     private LeagueDbContext GetDbContext() => new LeagueDbContext(_options);
@@ -105,7 +105,7 @@ public class FixturesControllerTests : IDisposable
         var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
         Assert.Equal("Home team and away team cannot be the same.", badRequestResult.Value);
     }
-    
+
     [Fact]
     public async Task CreateFixture_WithInvalidHomeTeamId_ReturnsBadRequest()
     {
@@ -146,7 +146,7 @@ public class FixturesControllerTests : IDisposable
         var updatedFixture = await context.Fixtures.FindAsync(1);
         Assert.Equal(newDate, updatedFixture?.KickOffDateTime);
     }
-    
+
     [Fact]
     public async Task UpdateFixture_WithInvalidFixtureId_ReturnsNotFound()
     {
@@ -161,5 +161,60 @@ public class FixturesControllerTests : IDisposable
 
         // Assert
         Assert.IsType<NotFoundResult>(result);
+    }
+    
+    [Fact]
+    public async Task SubmitResult_WithValidData_ReturnsOkResult()
+    {
+        // Arrange
+        await using var context = GetDbContext();
+        var team1 = new Team { Id = 1, Name = "Team A" };
+        var team2 = new Team { Id = 2, Name = "Team B" };
+        var player1 = new Player { Id = 1, TeamId = 1, Name = "Player 1" };
+        context.Teams.AddRange(team1, team2);
+        context.Players.Add(player1);
+        var fixture = new Fixture { Id = 1, HomeTeamId = 1, AwayTeamId = 2 };
+        context.Fixtures.Add(fixture);
+        await context.SaveChangesAsync();
+        
+        var controller = new FixturesController(context);
+        var submitDto = new SubmitResultDto
+        {
+            HomeScore = 1,
+            AwayScore = 0,
+            Goalscorers = new List<GoalscorerDto> { new() { PlayerId = 1 } }
+        };
+
+        // Act
+        var result = await controller.SubmitResult(1, submitDto);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var createdResult = Assert.IsType<Result>(okResult.Value);
+        Assert.Equal(ResultStatus.PendingApproval, createdResult.Status);
+    }
+
+    [Fact]
+    public async Task SubmitResult_WhenResultAlreadyExists_ReturnsBadRequest()
+    {
+        // Arrange
+        await using var context = GetDbContext();
+        var team1 = new Team { Id = 1, Name = "Team A" };
+        var team2 = new Team { Id = 2, Name = "Team B" };
+        context.Teams.AddRange(team1, team2);
+        var fixture = new Fixture { Id = 1, HomeTeamId = 1, AwayTeamId = 2 };
+        context.Fixtures.Add(fixture);
+        context.Results.Add(new Result { FixtureId = 1, HomeScore = 1, AwayScore = 0 });
+        await context.SaveChangesAsync();
+
+        var controller = new FixturesController(context);
+        var submitDto = new SubmitResultDto();
+
+        // Act
+        var result = await controller.SubmitResult(1, submitDto);
+
+        // Assert
+        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal("A result for this fixture has already been submitted.", badRequestResult.Value);
     }
 }

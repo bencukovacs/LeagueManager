@@ -10,6 +10,7 @@ builder.Services.AddDbContext<LeagueDbContext>(options => options.UseNpgsql(buil
 builder.Services.AddControllers();
 builder.Services.AddScoped<ILeagueTableService, LeagueTableService>();
 builder.Services.AddScoped<ITopScorersService, TopScorersService>();
+builder.Services.AddScoped<ITeamService, TeamService>();
 
 var app = builder.Build();
 

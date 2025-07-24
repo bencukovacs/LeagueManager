@@ -1,8 +1,6 @@
-using LeagueManager.API.Data;
 using LeagueManager.API.Dtos;
-using LeagueManager.API.Models;
+using LeagueManager.API.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace LeagueManager.API.Controllers;
 
@@ -10,100 +8,66 @@ namespace LeagueManager.API.Controllers;
 [Route("api/[controller]")]
 public class TeamsController : ControllerBase
 {
-    private readonly LeagueDbContext _context;
+    private readonly ITeamService _teamService;
 
-    public TeamsController(LeagueDbContext context)
+    public TeamsController(ITeamService teamService)
     {
-        _context = context;
+        _teamService = teamService;
     }
 
-    // GET: api/teams
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Team>>> GetTeams()
+    public async Task<IActionResult> GetTeams()
     {
-        var teams = await _context.Teams.ToListAsync();
+        var teams = await _teamService.GetAllTeamsAsync();
         return Ok(teams);
     }
 
-    // GET: api/teams/5
     [HttpGet("{id}")]
-    public async Task<ActionResult<Team>> GetTeam(int id)
+    public async Task<IActionResult> GetTeam(int id)
     {
-        var team = await _context.Teams.FindAsync(id);
-
-        if(team == null)
+        var team = await _teamService.GetTeamByIdAsync(id);
+        if (team == null)
         {
             return NotFound();
         }
-
         return Ok(team);
     }
 
-    // POST: api/teams
     [HttpPost]
-    public async Task<ActionResult<Team>> CreateTeam([FromBody] CreateTeamDto createTeamDto)
+    public async Task<IActionResult> CreateTeam([FromBody] CreateTeamDto createTeamDto)
     {
-        var team = new Team
-        {
-            Name = createTeamDto.Name,
-            PrimaryColor = createTeamDto.PrimaryColor,
-            SecondaryColor = createTeamDto.SecondaryColor
-        };
-
-        _context.Teams.Add(team);
-        await _context.SaveChangesAsync();
-        
-        return CreatedAtAction(nameof(GetTeam), new { id= team.Id }, team);
+        var newTeam = await _teamService.CreateTeamAsync(createTeamDto);
+        return CreatedAtAction(nameof(GetTeam), new { id = newTeam.Id }, newTeam);
     }
 
-    // PUT: api/teams/5
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateTeam(int id, [FromBody] CreateTeamDto updateTeamDto)
     {
-        var team = await _context.Teams.FindAsync(id);
-        if(team == null)
+        var team = await _teamService.GetTeamByIdAsync(id);
+        if (team == null)
         {
             return NotFound();
         }
 
-        team.Name = updateTeamDto.Name;
-        team.PrimaryColor = updateTeamDto.PrimaryColor;
-        team.SecondaryColor = updateTeamDto.SecondaryColor;
-
-        _context.Entry(team).State = EntityState.Modified;
-
-        try
-        {
-            await _context.SaveChangesAsync();
-        }
-        catch(DbUpdateConcurrencyException)
-        {
-            if(!_context.Teams.Any(e => e.Id == id))
-            {
-                return NotFound();
-            }
-            else
-            {
-                throw;
-            }
-        }
-
+        await _teamService.UpdateTeamAsync(id, updateTeamDto);
         return NoContent();
     }
 
-    // DELETE: api/teams/5
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteTeam(int id)
     {
-        var team = await _context.Teams.FindAsync(id);
-        if(team == null)
+        try
         {
-            return NotFound();
+            var success = await _teamService.DeleteTeamAsync(id);
+            if (!success)
+            {
+                return NotFound();
+            }
+            return NoContent();
         }
-
-        _context.Teams.Remove(team);
-        await _context.SaveChangesAsync();
-
-        return NoContent();
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 }

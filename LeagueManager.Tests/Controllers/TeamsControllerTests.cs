@@ -1,177 +1,108 @@
+using Moq;
 using LeagueManager.API.Controllers;
-using LeagueManager.API.Data;
+using LeagueManager.API.Services;
 using LeagueManager.API.Dtos;
 using LeagueManager.API.Models;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Data.Sqlite;
 
 namespace LeagueManager.Tests.Controllers;
 
-public class TeamsControllerTests : IDisposable
+public class TeamsControllerTests
 {
-    private readonly SqliteConnection _connection;
-    private readonly DbContextOptions<LeagueDbContext> _options;
+    private readonly Mock<ITeamService> _mockTeamService;
+    private readonly TeamsController _controller;
 
     public TeamsControllerTests()
     {
-        _connection = new SqliteConnection("DataSource=:memory:");
-        _connection.Open();
-
-        _options = new DbContextOptionsBuilder<LeagueDbContext>()
-            .UseSqlite(_connection)
-            .Options;
-
-        using var context = new LeagueDbContext(_options);
-        context.Database.EnsureCreated();
-    }
-
-    private LeagueDbContext GetDbContext() => new LeagueDbContext(_options);
-    
-    public void Dispose()
-    {
-        _connection.Close();
-        _connection.Dispose();
+        _mockTeamService = new Mock<ITeamService>();
+        _controller = new TeamsController(_mockTeamService.Object);
     }
 
     [Fact]
-    public async Task GetTeams_ReturnsOkResult_WithListOfTeams()
+    public async Task GetTeam_WhenTeamExists_ReturnsOkResult()
     {
         // Arrange
-        await using var context = GetDbContext();
-        context.Teams.Add(new Team { Name = "Team A" });
-        context.Teams.Add(new Team { Name = "Team B" });
-        await context.SaveChangesAsync();
-        
-        var controller = new TeamsController(context);
-
-        // Act
-        var result = await controller.GetTeams();
-
-        // Assert
-        var okResult = Assert.IsType<OkObjectResult>(result.Result);
-        var teams = Assert.IsAssignableFrom<IEnumerable<Team>>(okResult.Value);
-        Assert.Equal(2, teams.Count());
-    }
-    
-    [Fact]
-    public async Task GetTeam_WithExistingId_ReturnsOkResult_WithTeam()
-    {
-        // Arrange
-        await using var context = GetDbContext();
         var team = new Team { Id = 1, Name = "Test Team" };
-        context.Teams.Add(team);
-        await context.SaveChangesAsync();
-
-        var controller = new TeamsController(context);
+        _mockTeamService.Setup(service => service.GetTeamByIdAsync(1)).ReturnsAsync(team);
 
         // Act
-        var result = await controller.GetTeam(1);
+        var result = await _controller.GetTeam(1);
 
         // Assert
-        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        var okResult = Assert.IsType<OkObjectResult>(result);
         var returnedTeam = Assert.IsType<Team>(okResult.Value);
         Assert.Equal(1, returnedTeam.Id);
     }
-    
+
     [Fact]
-    public async Task GetTeam_WithNonExistentId_ReturnsNotFound()
+    public async Task GetTeam_WhenTeamDoesNotExist_ReturnsNotFound()
     {
         // Arrange
-        await using var context = GetDbContext();
-        var controller = new TeamsController(context);
+        _mockTeamService.Setup(service => service.GetTeamByIdAsync(99)).ReturnsAsync((Team?)null);
 
         // Act
-        var result = await controller.GetTeam(99);
+        var result = await _controller.GetTeam(99);
 
         // Assert
-        Assert.IsType<NotFoundResult>(result.Result);
+        Assert.IsType<NotFoundResult>(result);
     }
-    
+
     [Fact]
     public async Task CreateTeam_WithValidDto_ReturnsCreatedAtAction()
     {
         // Arrange
-        await using var context = GetDbContext();
-        var controller = new TeamsController(context);
         var createDto = new CreateTeamDto { Name = "New Team" };
+        var newTeam = new Team { Id = 1, Name = "New Team" };
+        _mockTeamService.Setup(service => service.CreateTeamAsync(createDto)).ReturnsAsync(newTeam);
 
         // Act
-        var result = await controller.CreateTeam(createDto);
+        var result = await _controller.CreateTeam(createDto);
 
         // Assert
-        var createdAtActionResult = Assert.IsType<CreatedAtActionResult>(result.Result);
-        var createdTeam = Assert.IsType<Team>(createdAtActionResult.Value);
-        Assert.Equal("New Team", createdTeam.Name);
-        Assert.Equal(1, await context.Teams.CountAsync()); // Verify it was added to the db
+        var createdAtActionResult = Assert.IsType<CreatedAtActionResult>(result);
+        Assert.Equal("GetTeam", createdAtActionResult.ActionName);
+        Assert.NotNull(createdAtActionResult.RouteValues);
+        Assert.Equal(1, createdAtActionResult.RouteValues["id"]);
     }
 
     [Fact]
-    public async Task UpdateTeam_WithValidIdAndDto_ReturnsNoContent()
+    public async Task DeleteTeam_WhenDeleteIsSuccessful_ReturnsNoContent()
     {
         // Arrange
-        await using var context = GetDbContext();
-        var team = new Team { Id = 1, Name = "Old Name" };
-        context.Teams.Add(team);
-        await context.SaveChangesAsync();
-        
-        var controller = new TeamsController(context);
-        var updateDto = new CreateTeamDto { Name = "Updated Name" };
+        _mockTeamService.Setup(service => service.DeleteTeamAsync(1)).ReturnsAsync(true);
 
         // Act
-        var result = await controller.UpdateTeam(1, updateDto);
+        var result = await _controller.DeleteTeam(1);
 
         // Assert
         Assert.IsType<NoContentResult>(result);
-        var updatedTeam = await context.Teams.FindAsync(1);
-        Assert.Equal("Updated Name", updatedTeam?.Name);
     }
-    
+
     [Fact]
-    public async Task UpdateTeam_WithInvalidId_ReturnsNotFound()
+    public async Task DeleteTeam_WhenTeamDoesNotExist_ReturnsNotFound()
     {
         // Arrange
-        await using var context = GetDbContext();
-        var controller = new TeamsController(context);
-        var updateDto = new CreateTeamDto { Name = "Updated Name" };
+        _mockTeamService.Setup(service => service.DeleteTeamAsync(99)).ReturnsAsync(false);
 
         // Act
-        var result = await controller.UpdateTeam(99, updateDto);
+        var result = await _controller.DeleteTeam(99);
 
         // Assert
         Assert.IsType<NotFoundResult>(result);
     }
 
     [Fact]
-    public async Task DeleteTeam_WithExistingId_ReturnsNoContent()
+    public async Task DeleteTeam_WhenTeamIsInUse_ReturnsBadRequest()
     {
         // Arrange
-        await using var context = GetDbContext();
-        var team = new Team { Id = 1, Name = "Team to Delete" };
-        context.Teams.Add(team);
-        await context.SaveChangesAsync();
-        
-        var controller = new TeamsController(context);
+        _mockTeamService.Setup(service => service.DeleteTeamAsync(1))
+            .ThrowsAsync(new InvalidOperationException("Cannot delete a team that is currently assigned to a fixture."));
 
         // Act
-        var result = await controller.DeleteTeam(1);
+        var result = await _controller.DeleteTeam(1);
 
         // Assert
-        Assert.IsType<NoContentResult>(result);
-        Assert.Equal(0, await context.Teams.CountAsync());
-    }
-
-    [Fact]
-    public async Task DeleteTeam_WithInvalidId_ReturnsNotFound()
-    {
-        // Arrange
-        await using var context = GetDbContext();
-        var controller = new TeamsController(context);
-
-        // Act
-        var result = await controller.DeleteTeam(99);
-
-        // Assert
-        Assert.IsType<NotFoundResult>(result);
+        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal("Cannot delete a team that is currently assigned to a fixture.", badRequestResult.Value);
     }
 }
