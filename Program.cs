@@ -1,5 +1,6 @@
 using LeagueManager.Data;
 using Microsoft.EntityFrameworkCore;
+using LeagueManager.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -7,6 +8,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<LeagueDbContext>(options => options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddControllers();
+builder.Services.AddScoped<ILeagueTableService, LeagueTableService>();
 
 var app = builder.Build();
 
