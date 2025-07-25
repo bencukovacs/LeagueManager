@@ -3,18 +3,27 @@ using LeagueManager.API.Controllers;
 using LeagueManager.Application.Services;
 using LeagueManager.Application.Dtos;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
+using System.Security.Claims;
 
 namespace LeagueManager.Tests.Controllers;
 
 public class TeamsControllerTests
 {
     private readonly Mock<ITeamService> _mockTeamService;
+    private readonly Mock<IAuthorizationService> _mockAuthorizationService;
     private readonly TeamsController _controller;
 
     public TeamsControllerTests()
     {
+        _mockAuthorizationService = new Mock<IAuthorizationService>();
         _mockTeamService = new Mock<ITeamService>();
-        _controller = new TeamsController(_mockTeamService.Object);
+        _controller = new TeamsController(_mockTeamService.Object, _mockAuthorizationService.Object);
+        _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity()) }
+        };
     }
 
     [Fact]
@@ -130,13 +139,17 @@ public class TeamsControllerTests
     }
 
     [Fact]
-    public async Task UpdateTeam_WhenSuccessful_ReturnsNoContent()
+    public async Task UpdateTeam_WhenAuthorizationSucceeds_ReturnsNoContent()
     {
         // Arrange
         var updateDto = new CreateTeamDto { Name = "Updated Name" };
-        // FIX: Added Status property
         var responseDto = new TeamResponseDto { Id = 1, Name = "Updated Name", Status = "Approved" };
         _mockTeamService.Setup(s => s.UpdateTeamAsync(1, updateDto)).ReturnsAsync(responseDto);
+
+        // --- NEW: Setup the authorization mock to return a success result ---
+        _mockAuthorizationService
+            .Setup(s => s.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), "CanManageTeam"))
+            .ReturnsAsync(AuthorizationResult.Success());
 
         // Act
         var result = await _controller.UpdateTeam(1, updateDto);
@@ -146,11 +159,34 @@ public class TeamsControllerTests
     }
 
     [Fact]
+    public async Task UpdateTeam_WhenAuthorizationFails_ReturnsForbid()
+    {
+        // Arrange
+        var updateDto = new CreateTeamDto { Name = "Updated Name" };
+        
+        // --- NEW: Setup the authorization mock to return a failure result ---
+        _mockAuthorizationService
+            .Setup(s => s.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), "CanManageTeam"))
+            .ReturnsAsync(AuthorizationResult.Failed());
+
+        // Act
+        var result = await _controller.UpdateTeam(1, updateDto);
+
+        // Assert
+        Assert.IsType<ForbidResult>(result);
+    }
+
+    [Fact]
     public async Task UpdateTeam_WhenTeamNotFound_ReturnsNotFound()
     {
         // Arrange
         var updateDto = new CreateTeamDto { Name = "Updated Name" };
         _mockTeamService.Setup(s => s.UpdateTeamAsync(99, updateDto)).ReturnsAsync((TeamResponseDto?)null);
+        
+        // --- NEW: We still need to simulate successful authorization to get to the service call ---
+        _mockAuthorizationService
+            .Setup(s => s.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), "CanManageTeam"))
+            .ReturnsAsync(AuthorizationResult.Success());
 
         // Act
         var result = await _controller.UpdateTeam(99, updateDto);

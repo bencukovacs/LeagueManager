@@ -11,10 +11,12 @@ namespace LeagueManager.API.Controllers;
 public class TeamsController : ControllerBase
 {
     private readonly ITeamService _teamService;
+    private readonly IAuthorizationService _authorizationService;
 
-    public TeamsController(ITeamService teamService)
+    public TeamsController(ITeamService teamService, IAuthorizationService authorizationService)
     {
         _teamService = teamService;
+        _authorizationService = authorizationService;
     }
 
     [HttpGet]
@@ -64,9 +66,18 @@ public class TeamsController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize]
     public async Task<IActionResult> UpdateTeam(int id, [FromBody] CreateTeamDto updateTeamDto)
     {
+        // Perform the resource-based authorization check
+        var authorizationResult = await _authorizationService.AuthorizeAsync(User, id, "CanManageTeam");
+        if (!authorizationResult.Succeeded)
+        {
+            // If the policy fails, return a 403 Forbidden or 404 Not Found
+            return Forbid();
+        }
+
+        // If authorization succeeds, proceed with the update
         var team = await _teamService.UpdateTeamAsync(id, updateTeamDto);
         if (team == null)
         {

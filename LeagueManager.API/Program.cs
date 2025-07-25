@@ -11,6 +11,8 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using LeagueManager.Application.Settings;
 using Microsoft.OpenApi.Models;
+using LeagueManager.API.Authorization;
+using Microsoft.AspNetCore.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -77,8 +79,9 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization(options =>
 {
+    // This policy will now use our custom requirement and handler
     options.AddPolicy("CanManageTeam", policy =>
-        policy.RequireAuthenticatedUser());
+        policy.AddRequirements(new CanManageTeamRequirement()));
 });
 
 
@@ -95,6 +98,8 @@ builder.Services.AddScoped<IResultService, ResultService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
 builder.Services.AddAutoMapper(typeof(MappingProfile));
+
+builder.Services.AddSingleton<IAuthorizationHandler, CanManageTeamHandler>();
 
 var app = builder.Build();
 
