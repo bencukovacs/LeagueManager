@@ -139,17 +139,16 @@ public class TeamsControllerTests
     }
 
     [Fact]
-    public async Task DeleteTeam_WhenTeamIsInUse_ReturnsBadRequest()
+    public async Task DeleteTeam_WhenTeamIsInUse_ThrowsInvalidOperationException()
     {
         // Arrange
+        var expectedExceptionMessage = "Cannot delete a team that is currently assigned to a fixture.";
         _mockTeamService.Setup(service => service.DeleteTeamAsync(1))
-            .ThrowsAsync(new InvalidOperationException("Cannot delete a team that is currently assigned to a fixture."));
+            .ThrowsAsync(new InvalidOperationException(expectedExceptionMessage));
 
-        // Act
-        var result = await _controller.DeleteTeam(1);
-
-        // Assert
-        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
-        Assert.Equal("Cannot delete a team that is currently assigned to a fixture.", badRequestResult.Value);
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => _controller.DeleteTeam(1));
+        
+        Assert.Equal(expectedExceptionMessage, exception.Message);
     }
 }

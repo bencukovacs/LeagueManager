@@ -1,4 +1,3 @@
-using AutoMapper;
 using LeagueManager.Application.Dtos;
 using LeagueManager.Application.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -19,9 +18,10 @@ public class FixturesController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetFixtures()
     {
-        return Ok(await _fixtureService.GetAllFixturesAsync());
+        var fixtures = await _fixtureService.GetAllFixturesAsync();
+        return Ok(fixtures);
     }
-    
+
     [HttpGet("{id}")]
     public async Task<IActionResult> GetFixture(int id)
     {
@@ -50,7 +50,7 @@ public class FixturesController : ControllerBase
     [HttpPost("{fixtureId}/results")]
     public async Task<IActionResult> SubmitResult(int fixtureId, [FromBody] SubmitResultDto resultDto)
     {
-        try
+       try
         {
             var result = await _fixtureService.SubmitResultAsync(fixtureId, resultDto);
             return Ok(result);

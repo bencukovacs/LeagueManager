@@ -53,18 +53,11 @@ public class TeamsController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteTeam(int id)
     {
-        try
+        var success = await _teamService.DeleteTeamAsync(id);
+        if (!success)
         {
-            var success = await _teamService.DeleteTeamAsync(id);
-            if (!success)
-            {
-                return NotFound();
-            }
-            return NoContent();
+            return NotFound();
         }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(ex.Message);
-        }
+        return NoContent();
     }
 }

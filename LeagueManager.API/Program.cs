@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using LeagueManager.Infrastructure.Services;
 using LeagueManager.Application.Services;
 using LeagueManager.Application.MappingProfiles;
+using LeagueManager.API.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,6 +23,8 @@ builder.Services.AddScoped<IResultService, ResultService>();
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 
 var app = builder.Build();
+
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

@@ -18,7 +18,8 @@ public class LocationsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetLocations()
     {
-        return Ok(await _locationService.GetAllLocationsAsync());
+        var locations = await _locationService.GetAllLocationsAsync();
+        return Ok(locations);
     }
 
     [HttpGet("{id}")]
@@ -53,18 +54,11 @@ public class LocationsController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteLocation(int id)
     {
-        try
+        var success = await _locationService.DeleteLocationAsync(id);
+        if (!success)
         {
-            var success = await _locationService.DeleteLocationAsync(id);
-            if (!success)
-            {
-                return NotFound();
-            }
-            return NoContent();
+            return NotFound();
         }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(ex.Message);
-        }
+        return NoContent();
     }
 }

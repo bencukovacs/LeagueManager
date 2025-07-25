@@ -114,17 +114,16 @@ public class LocationsControllerTests
     }
 
     [Fact]
-    public async Task DeleteLocation_WhenLocationIsInUse_ReturnsBadRequest()
+    public async Task DeleteLocation_WhenLocationIsInUse_ThrowsInvalidOperationException()
     {
         // Arrange
-        _mockLocationService.Setup(s => s.DeleteLocationAsync(1))
-            .ThrowsAsync(new InvalidOperationException("Cannot delete location as it is currently assigned to one or more fixtures."));
+        var expectedExceptionMessage = "Cannot delete a location that is currently assigned to a fixture.";
+        _mockLocationService.Setup(service => service.DeleteLocationAsync(1))
+            .ThrowsAsync(new InvalidOperationException(expectedExceptionMessage));
 
-        // Act
-        var result = await _controller.DeleteLocation(1);
-
-        // Assert
-        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
-        Assert.Equal("Cannot delete location as it is currently assigned to one or more fixtures.", badRequestResult.Value);
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => _controller.DeleteLocation(1));
+        
+        Assert.Equal(expectedExceptionMessage, exception.Message);
     }
 }
