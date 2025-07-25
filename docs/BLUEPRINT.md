@@ -1,72 +1,92 @@
-# Project Blueprint: League Manager
+# League Manager: Project Blueprint
 
-This document outlines the complete plan for the League Manager application, including user roles, features by phase, and detailed workflows.
-
----
-
-## 1. User Roles
-
-* **Guest (Unregistered):** Can view public-facing information like the league table, top scorers, and upcoming fixtures.
-* **Player (Registered `User`):** Optional role. A registered user linked to a `Player` profile. They can sign up for upcoming matches and view team-specific information.
-* **Team Leader (`User`):** Can manage their team's roster, submit match results, enter Man of the Match votes, and manage their team's attendance for a match. A team can have a maximum of two Team Leaders.
-* **League Admin (`User`):** Has full control. Can create/manage teams, players, locations, and fixtures. They approve match results, handle disputes, and manage the overall league settings.
+This document outlines the vision, features, and technical architecture for a comprehensive football league management platform.
 
 ---
 
-## 2. Phased Development Plan
+## I. Core Concepts & Entities
 
-### **Phase 1: The Core Foundation (Current)**
-* **Goal:** Build the basic data structure and APIs for managing the league's core entities.
-* **Features:**
-    * Data models for `Team`, `Player`, `Fixture`, `Location`.
-    * Full CRUD API endpoints for managing these entities.
-    * Basic service to calculate a league table from submitted results (logic placeholder).
-    * Database setup with PostgreSQL and Entity Framework.
-    * Containerize the database with Docker.
-
-### **Phase 2: Management & Results**
-* **Goal:** Implement the full workflow for match result submission and approval.
-* **Features:**
-    * `Result` data model to store scores.
-    * `Goal` data model linked to `Player` and `Fixture`.
-    * `User` model with roles (`Admin`, `Team Leader`).
-    * Secure endpoints for `Team Leader`s to submit match results (scores and goal scorers).
-    * Workflow for `League Admin` to approve, dispute, or edit submitted results.
-    * Functional league standings and top scorer tables based on approved results.
-
-### **Phase 3: Engagement & Logistics**
-* **Goal:** Add features for player interaction and scheduling complexity.
-* **Features:**
-    * **Match Attendance:**
-        * `Team Leader`s and registered `Player`s can mark attendance for an upcoming fixture.
-        * Automated notification to `League Admin` if a team lacks sufficient players 24 hours before a match.
-    * **Man of the Match (MOM) Voting:**
-        * `MOMVote` data model.
-        * A `Team Leader` can submit their team's collective vote for their own MOM and the opponent's MOM.
-    * **Automated Fixture Drafting:**
-        * An admin tool to automatically generate a round-robin schedule for the season.
-        * Considers team availability preferences (`TeamAvailability` model).
-
-### **Phase 4: Advanced Features & Integrations**
-* **Goal:** Add advanced league formats and external integrations.
-* **Features:**
-    * Logic for splitting the league into upper and lower house finals after the main season.
-    * Ability for admins to manage partial parking lot closures for specific dates.
-    * (Optional) Integration with Microsoft Teams for notifications or attendance polling.
+* **League / Season:** The top-level container.
+  * **Properties:** `Name`, `StartDate`, `EndDate`, `MinPlayersPerTeam`, `RosterLockDate`, `MidSeasonTransferLimit`.
+* **Team:** Represents a team in the league.
+  * **Properties:** `Name`, `PrimaryColor`, `SecondaryColor`, `Status` (e.g., `PendingApproval`, `Approved`), `SendAttendanceReminders` (boolean).
+* **Player:** A roster member. Can exist without a User account.
+  * **Properties:** `Name`. Linked to a `Team`.
+* **User:** A person who can log in for authentication and authorization.
+  * **Properties:** `Email`, `PasswordHash`. Can be optionally linked to a `Player` entity. Has a `Role`.
+* **TeamMembership:** Links a `User` to a `Team` with a specific role.
+  * **Properties:** `UserId`, `TeamId`, `Role` (e.g., `Leader`, `AssistantLeader`, `Member`).
+* **Location:** A venue for matches.
+* **Fixture / Match:** A scheduled game.
+* **Result:** The outcome of a completed match.
+* **Goal:** A goal scored in a match.
+* **MOMVote:** A team's collective "Man of the Match" vote for a fixture.
+* **TeamAvailability:** A record of when a team is available to play.
+* **Attendance:** A player's confirmation for a specific match.
+* **JoinRequest:** A user's request to join a team.
+  * **Properties:** `UserId`, `TeamId`, `Status` (`Pending`, `Approved`, `Rejected`).
+* **TransferAppeal:** A Team Leader's request to sign a player beyond the mid-season limit.
+  * **Properties:** `TeamId`, `PlayerName`, `Justification`, `Status` (`Pending`, `Approved`, `Rejected`).
 
 ---
 
-## 3. Detailed Workflows
+## II. User Roles & Permissions
 
-### **Result Submission Workflow**
-1.  After a match, the `Team Leader` from either team accesses the "Submit Result" page.
-2.  They enter the final score and select the goal scorers from a player list.
-3.  The result is saved with a `PendingApproval` status.
-4.  The `League Admin` receives a notification.
-5.  The Admin reviews the result. They can `Approve` it, making it official, or `Dispute` it, which may require manual correction. The league table only updates with `Approved` results.
+* **Guest (Anonymous User):** Can view public league data (standings, fixtures, etc.).
+* **RegisteredUser:** Everything a Guest can do, plus:
+  * Create a new team (which starts as `PendingApproval`).
+  * Request to join an existing team.
+* **Team Member (via `TeamMembership`):** Everything a RegisteredUser can do, plus:
+  * Sign up for their own team's matches.
+  * View their team's private "bulletin board."
+* **Team Leader / AssistantLeader (via `TeamMembership`):** Everything a Team Member can do, plus:
+  * Manage their team's roster (add/remove player names, send invites to link User accounts).
+  * Submit match results.
+  * Manage attendance for all players on their roster.
+  * Submit transfer appeals.
+  * Configure team settings (like opting out of email reminders).
+* **League Admin:** Full control over the system.
+  * Manage seasons, teams, and players.
+  * Approve pending teams after checking the "onboarding checklist."
+  * Approve match results and transfer appeals.
+  * Send broadcast messages to all Team Leaders.
 
-### **Match Attendance Workflow**
-1.  A fixture is scheduled.
-2.  Up until 24 hours before kickoff, registered `Player`s can mark themselves as "Attending" or "Not Attending."
-3.  `Team Leader`s can view their team's attendance list and can manually mark unregistered players as attending.
-4.  24 hours before the match, if a team has fewer than the required number of players signed up, a notification is automatically sent to the `League Admin`.
+---
+
+## III. Feature Roadmap: A Phased Approach
+
+### Phase 1: Core MVP (Complete)
+
+* **Functionality:** Standings table, goal scorers table, and basic CRUD for all core entities. All data is entered by an Admin.
+* **Architecture:** Clean Architecture with separate Domain, Application, Infrastructure, and API projects. Full unit test suite for all services and controllers.
+
+### Phase 2: Management & Authentication Layer
+
+* **Goal:** Empower users to register, log in, and manage their own teams.
+* **Features:**
+  * **User Authentication:** Full registration and JWT-based login system.
+  * **Team Creation Workflow:** Registered users can create teams, which enter a `PendingApproval` state.
+  * **Team-Specific Roles:** Implement the `TeamMembership` system.
+  * **Result Submission:** Team Leaders can submit match results.
+  * **Admin Approval Queues:** A dashboard for the League Admin to view and approve pending teams and results.
+  * **Team Onboarding Checklist:** The backend provides data for the UI to show an admin what a new team still needs to do before being approved.
+
+### Phase 3: Advanced Scheduling & Roster Management
+
+* **Goal:** Add complex, high-value features.
+* **Features:**
+  * **Automated Fixture Drafting:** An admin tool to generate a full season schedule.
+  * **Player Attendance Sign-up:** Players and leaders can manage attendance.
+  * **Team Leader Invites & Player Join Requests:** User-driven roster management.
+  * **Roster Lock & Transfers:** Admins can set a roster lock date. Team Leaders can use their mid-season transfer allowance and submit appeals for more.
+  * **MOM Voting:** Implement the Man of the Match submission and calculation logic.
+
+### Phase 4: Notifications & Integrations
+
+* **Goal:** Automate communication and connect to external tools.
+* **Features:**
+  * **Email Notification System:**
+    * Automated attendance reminders (with team-level opt-out).
+    * Insufficient player warnings to leaders and admins.
+    * Broadcast messaging from admins to all team leaders.
+  * **MS Teams Integration:** (Future) Post match reminders via webhooks

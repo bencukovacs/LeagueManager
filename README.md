@@ -28,7 +28,7 @@ This is the backend API for a web application designed to manage an amateur or c
     * Start the PostgreSQL database container:
 
         ```bash
-        docker run --name league-db -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -p 5433:5432 -d postgres
+        docker run --name league-db -e POSTG-RES_USER=postgres -e POSTGRES_PASSWORD=postgres -p 5433:5432 -d postgres
         ```
 
     * Ensure the connection string in `appsettings.Development.json` matches the user, password, and port (`5433`).
@@ -50,6 +50,7 @@ This is the backend API for a web application designed to manage an amateur or c
 
 ## Documentation
 
-For a detailed project plan and full feature list, see the **[Project Blueprint](docs/BLUEPRINT.md)**.
-
-For database diagrams and schema information, see the **[Database Documentation](docs/DATABASE.md)**.
+* **Project Features & Roadmap:** [Project Blueprint](docs/BLUEPRINT.md)
+* **Database Schema:** [Database Documentation](docs/DATABASE.md)
+* **Frontend Plan:** [Frontend Documentation](docs/FRONTEND.md)
+* **Infrastructure & DevOps:** [Infrastructure Documentation](docs/INFRASTRUCTURE.md)
