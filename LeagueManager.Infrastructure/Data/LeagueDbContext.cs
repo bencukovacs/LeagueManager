@@ -1,9 +1,10 @@
 using LeagueManager.Domain.Models;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace LeagueManager.Infrastructure.Data;
 
-public class LeagueDbContext : DbContext
+public class LeagueDbContext : IdentityDbContext<User>
 {
     public LeagueDbContext(DbContextOptions<LeagueDbContext> options) : base(options) { }
 
@@ -23,7 +24,6 @@ public class LeagueDbContext : DbContext
             .WithMany()
             .HasForeignKey(f => f.HomeTeamId)
             .OnDelete(DeleteBehavior.Restrict);
-
 
         modelBuilder.Entity<Fixture>()
             .HasOne(f => f.AwayTeam)
