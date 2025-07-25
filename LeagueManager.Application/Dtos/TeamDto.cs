@@ -11,3 +11,11 @@ public class CreateTeamDto
     public string? PrimaryColor { get; set; }
     public string? SecondaryColor { get; set; }
 }
+
+public class TeamResponseDto
+{
+    public int Id { get; set; }
+    public required string Name { get; set; }
+    public string? PrimaryColor { get; set; }
+    public string? SecondaryColor { get; set; }
+}

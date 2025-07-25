@@ -1,7 +1,8 @@
-using LeagueManager.Infrastructure.Data;
+using AutoMapper;
 using LeagueManager.Application.Dtos;
-using LeagueManager.Domain.Models;
 using LeagueManager.Application.Services;
+using LeagueManager.Domain.Models;
+using LeagueManager.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace LeagueManager.Infrastructure.Services;
@@ -9,31 +10,28 @@ namespace LeagueManager.Infrastructure.Services;
 public class LeagueTableService : ILeagueTableService
 {
     private readonly LeagueDbContext _context;
+    private readonly IMapper _mapper;
 
-    public LeagueTableService(LeagueDbContext context)
+    public LeagueTableService(LeagueDbContext context, IMapper mapper)
     {
         _context = context;
+        _mapper = mapper;
     }
 
     public async Task<IEnumerable<TeamStatsDto>> GetLeagueTableAsync()
     {
         var teams = await _context.Teams.ToListAsync();
-        
         var approvedResults = await _context.Results
             .Where(r => r.Status == ResultStatus.Approved)
             .Include(r => r.Fixture)
             .ToListAsync();
 
-        var statsList = teams.Select(t => new TeamStatsDto { TeamName = t.Name }).ToList();
+        var stats = teams.Select(t => new TeamStatsDto { TeamName = t.Name }).ToList();
 
         foreach (var result in approvedResults)
         {
-            if (result.Fixture == null) continue;
-
-            var homeTeamStats = statsList.FirstOrDefault(s => s.TeamName == teams.First(t => t.Id == result.Fixture.HomeTeamId).Name);
-            var awayTeamStats = statsList.FirstOrDefault(s => s.TeamName == teams.First(t => t.Id == result.Fixture.AwayTeamId).Name);
-
-            if (homeTeamStats == null || awayTeamStats == null) continue;
+            var homeTeamStats = stats.First(s => s.TeamName == teams.First(t => t.Id == result.Fixture!.HomeTeamId).Name);
+            var awayTeamStats = stats.First(s => s.TeamName == teams.First(t => t.Id == result.Fixture!.AwayTeamId).Name);
 
             homeTeamStats.Played++;
             awayTeamStats.Played++;
@@ -48,7 +46,7 @@ public class LeagueTableService : ILeagueTableService
                 homeTeamStats.Points += 3;
                 awayTeamStats.Lost++;
             }
-            else if (result.AwayScore > result.HomeScore) 
+            else if (result.AwayScore > result.HomeScore)
             {
                 awayTeamStats.Won++;
                 awayTeamStats.Points += 3;
@@ -63,8 +61,8 @@ public class LeagueTableService : ILeagueTableService
             }
         }
         
-        return statsList.OrderByDescending(s => s.Points)
-                        .ThenByDescending(s => s.GoalDifference)
-                        .ThenByDescending(s => s.GoalsFor);
+        return stats.OrderByDescending(s => s.Points)
+                    .ThenByDescending(s => s.GoalDifference)
+                    .ThenByDescending(s => s.GoalsFor);
     }
 }

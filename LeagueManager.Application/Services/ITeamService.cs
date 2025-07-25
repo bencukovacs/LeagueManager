@@ -5,9 +5,9 @@ namespace LeagueManager.Application.Services;
 
 public interface ITeamService
 {
-    Task<IEnumerable<Team>> GetAllTeamsAsync();
-    Task<Team?> GetTeamByIdAsync(int id);
-    Task<Team> CreateTeamAsync(CreateTeamDto teamDto);
-    Task UpdateTeamAsync(int id, CreateTeamDto teamDto);
+    Task<IEnumerable<TeamResponseDto>> GetAllTeamsAsync();
+    Task<TeamResponseDto?> GetTeamByIdAsync(int id);
+    Task<TeamResponseDto> CreateTeamAsync(CreateTeamDto teamDto);
+    Task<TeamResponseDto?> UpdateTeamAsync(int id, CreateTeamDto teamDto);
     Task<bool> DeleteTeamAsync(int id);
 }

@@ -1,9 +1,13 @@
+using Xunit;
 using Moq;
 using LeagueManager.API.Controllers;
 using LeagueManager.Application.Services;
 using LeagueManager.Application.Dtos;
 using LeagueManager.Domain.Models;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using System;
 
 namespace LeagueManager.Tests.Controllers;
 
@@ -22,7 +26,7 @@ public class LocationsControllerTests
     public async Task GetLocations_ReturnsOkResult_WithListOfLocations()
     {
         // Arrange
-        var locations = new List<Location> { new Location { Id = 1, Name = "Pitch 1" } };
+        var locations = new List<LocationResponseDto> { new() { Id = 1, Name = "Pitch 1" } };
         _mockLocationService.Setup(s => s.GetAllLocationsAsync()).ReturnsAsync(locations);
 
         // Act
@@ -30,7 +34,7 @@ public class LocationsControllerTests
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
-        var returnedLocations = Assert.IsAssignableFrom<IEnumerable<Location>>(okResult.Value);
+        var returnedLocations = Assert.IsAssignableFrom<IEnumerable<LocationResponseDto>>(okResult.Value);
         Assert.Single(returnedLocations);
     }
 
@@ -38,7 +42,7 @@ public class LocationsControllerTests
     public async Task GetLocation_WhenLocationExists_ReturnsOkResult()
     {
         // Arrange
-        var location = new Location { Id = 1, Name = "Main Pitch" };
+        var location = new LocationResponseDto { Id = 1, Name = "Main Pitch" };
         _mockLocationService.Setup(s => s.GetLocationByIdAsync(1)).ReturnsAsync(location);
 
         // Act
@@ -46,22 +50,25 @@ public class LocationsControllerTests
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
-        Assert.IsType<Location>(okResult.Value);
+        Assert.IsType<LocationResponseDto>(okResult.Value);
     }
-    
+
     [Fact]
     public async Task CreateLocation_WithValidDto_ReturnsCreatedAtAction()
     {
         // Arrange
         var dto = new LocationDto { Name = "Training Ground" };
-        var newLocation = new Location { Id = 1, Name = "Training Ground" };
+        var newLocation = new LocationResponseDto { Id = 1, Name = "Training Ground" };
         _mockLocationService.Setup(s => s.CreateLocationAsync(dto)).ReturnsAsync(newLocation);
 
         // Act
         var result = await _controller.CreateLocation(dto);
 
         // Assert
-        Assert.IsType<CreatedAtActionResult>(result);
+        var createdAtActionResult = Assert.IsType<CreatedAtActionResult>(result);
+        Assert.Equal("GetLocation", createdAtActionResult.ActionName);
+        Assert.NotNull(createdAtActionResult.RouteValues);
+        Assert.Equal(1, createdAtActionResult.RouteValues["id"]);
     }
 
     [Fact]
@@ -70,7 +77,7 @@ public class LocationsControllerTests
         // Arrange
         var dto = new LocationDto { Name = "Updated Name" };
         _mockLocationService.Setup(s => s.UpdateLocationAsync(1, dto))
-                            .ReturnsAsync(new Location { Name = "Updated Location" });
+                            .ReturnsAsync(new LocationResponseDto { Id = 1, Name = "Updated Name" });
 
         // Act
         var result = await _controller.UpdateLocation(1, dto);
@@ -84,7 +91,7 @@ public class LocationsControllerTests
     {
         // Arrange
         var dto = new LocationDto { Name = "Updated Name" };
-        _mockLocationService.Setup(s => s.UpdateLocationAsync(99, dto)).ReturnsAsync((Location?)null);
+        _mockLocationService.Setup(s => s.UpdateLocationAsync(99, dto)).ReturnsAsync((LocationResponseDto?)null);
 
         // Act
         var result = await _controller.UpdateLocation(99, dto);
@@ -104,7 +111,6 @@ public class LocationsControllerTests
 
         // Assert
         Assert.IsType<NoContentResult>(result);
-
     }
 
     [Fact]

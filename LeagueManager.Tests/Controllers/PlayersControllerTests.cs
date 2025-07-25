@@ -2,7 +2,6 @@ using Moq;
 using LeagueManager.API.Controllers;
 using LeagueManager.Application.Services;
 using LeagueManager.Application.Dtos;
-using LeagueManager.Domain.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LeagueManager.Tests.Controllers;
@@ -22,23 +21,25 @@ public class PlayersControllerTests
     public async Task GetPlayer_WhenPlayerExists_ReturnsOkResult()
     {
         // Arrange
-        var player = new Player { Id = 1, Name = "Test Player", TeamId = 1 };
-        _mockPlayerService.Setup(s => s.GetPlayerByIdAsync(1)).ReturnsAsync(player);
+        var playerDto = new PlayerResponseDto { Id = 1, Name = "Test Player", TeamName = "Team A" };
+        _mockPlayerService.Setup(s => s.GetPlayerByIdAsync(1)).ReturnsAsync(playerDto);
 
         // Act
         var result = await _controller.GetPlayer(1);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
-        var returnedPlayer = Assert.IsType<Player>(okResult.Value);
+        var returnedPlayer = Assert.IsType<PlayerResponseDto>(okResult.Value);
         Assert.Equal(1, returnedPlayer.Id);
+        Assert.Equal("Test Player", returnedPlayer.Name);
+        Assert.Equal("Team A", returnedPlayer.TeamName);
     }
 
     [Fact]
     public async Task GetPlayer_WhenPlayerDoesNotExist_ReturnsNotFound()
     {
         // Arrange
-        _mockPlayerService.Setup(s => s.GetPlayerByIdAsync(99)).ReturnsAsync((Player?)null);
+        _mockPlayerService.Setup(s => s.GetPlayerByIdAsync(99)).ReturnsAsync((PlayerResponseDto?)null);
 
         // Act
         var result = await _controller.GetPlayer(99);
@@ -52,18 +53,18 @@ public class PlayersControllerTests
     {
         // Arrange
         var playerDto = new PlayerDto { Name = "New Player", TeamId = 1 };
-        var newPlayer = new Player { Id = 1, Name = "New Player", TeamId = 1 };
-        _mockPlayerService.Setup(s => s.CreatePlayerAsync(playerDto)).ReturnsAsync(newPlayer);
-        // We also need to mock the GetPlayerByIdAsync call that happens inside the action
-        _mockPlayerService.Setup(s => s.GetPlayerByIdAsync(newPlayer.Id)).ReturnsAsync(newPlayer);
+        var createdPlayer = new PlayerResponseDto { Id = 1, Name = "New Player", TeamName = "Team A" };
+
+        _mockPlayerService.Setup(s => s.CreatePlayerAsync(playerDto)).ReturnsAsync(createdPlayer);
 
         // Act
         var result = await _controller.CreatePlayer(playerDto);
 
         // Assert
         var createdAtActionResult = Assert.IsType<CreatedAtActionResult>(result);
-        var createdPlayer = Assert.IsType<Player>(createdAtActionResult.Value);
-        Assert.Equal("New Player", createdPlayer.Name);
+        var returnedPlayer = Assert.IsType<PlayerResponseDto>(createdAtActionResult.Value);
+        Assert.Equal("New Player", returnedPlayer.Name);
+        Assert.Equal("Team A", returnedPlayer.TeamName);
     }
 
     [Fact]
@@ -71,7 +72,8 @@ public class PlayersControllerTests
     {
         // Arrange
         var playerDto = new PlayerDto { Name = "New Player", TeamId = 99 };
-        _mockPlayerService.Setup(s => s.CreatePlayerAsync(playerDto))
+        _mockPlayerService
+            .Setup(s => s.CreatePlayerAsync(playerDto))
             .ThrowsAsync(new ArgumentException("Invalid Team ID."));
 
         // Act
@@ -80,6 +82,35 @@ public class PlayersControllerTests
         // Assert
         var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
         Assert.Equal("Invalid Team ID.", badRequestResult.Value);
+    }
+
+    [Fact]
+    public async Task UpdatePlayer_WhenSuccessful_ReturnsNoContent()
+    {
+        // Arrange
+        var dto = new PlayerDto { Name = "Updated Name" };
+        _mockPlayerService.Setup(s => s.UpdatePlayerAsync(1, dto))
+                            .ReturnsAsync(new PlayerResponseDto { Id = 1, Name = "Updated Name" });
+
+        // Act
+        var result = await _controller.UpdatePlayer(1, dto);
+
+        // Assert
+        Assert.IsType<NoContentResult>(result);
+    }
+
+    [Fact]
+    public async Task UpdatePlayer_WhenPlayerNotFound_ReturnsNotFound()
+    {
+        // Arrange
+        var dto = new PlayerDto { Name = "Updated Name" };
+        _mockPlayerService.Setup(s => s.UpdatePlayerAsync(99, dto)).ReturnsAsync((PlayerResponseDto?)null);
+
+        // Act
+        var result = await _controller.UpdatePlayer(99, dto);
+
+        // Assert
+        Assert.IsType<NotFoundResult>(result);
     }
 
     [Fact]

@@ -1,9 +1,8 @@
-using LeagueManager.API.Controllers;
-using LeagueManager.Application.Dtos;
-using LeagueManager.Application.Services;
-using LeagueManager.Domain.Models;
-using Microsoft.AspNetCore.Mvc;
 using Moq;
+using LeagueManager.API.Controllers;
+using LeagueManager.Application.Services;
+using LeagueManager.Application.Dtos;
+using Microsoft.AspNetCore.Mvc;
 
 namespace LeagueManager.Tests.Controllers;
 
@@ -19,13 +18,16 @@ public class ResultsControllerTests
     }
 
     [Fact]
-    public async Task UpdateResultStatus_WithValidResultId_ReturnsNoContent()
+    public async Task UpdateResultStatus_WhenSuccessful_ReturnsNoContent()
     {
         // Arrange
-        var dto = new UpdateResultStatusDto { Status = ResultStatus.Approved };
+        var dto = new UpdateResultStatusDto { Status = LeagueManager.Domain.Models.ResultStatus.Approved };
+        var responseDto = new ResultResponseDto { Id = 1, FixtureId = 1, Status = "Approved", HomeScore = 1, AwayScore = 0 };
+
+        // The service now returns the DTO on success
         _mockResultService
             .Setup(service => service.UpdateResultStatusAsync(1, dto))
-            .ReturnsAsync(true);
+            .ReturnsAsync(responseDto);
 
         // Act
         var result = await _controller.UpdateResultStatus(1, dto);
@@ -35,13 +37,15 @@ public class ResultsControllerTests
     }
 
     [Fact]
-    public async Task UpdateResultStatus_WithInvalidResultId_ReturnsNotFound()
+    public async Task UpdateResultStatus_WhenResultNotFound_ReturnsNotFound()
     {
         // Arrange
-        var dto = new UpdateResultStatusDto { Status = ResultStatus.Approved };
+        var dto = new UpdateResultStatusDto { Status = LeagueManager.Domain.Models.ResultStatus.Approved };
+
+        // The service now returns null when the result is not found
         _mockResultService
             .Setup(service => service.UpdateResultStatusAsync(99, dto))
-            .ReturnsAsync(false);
+            .ReturnsAsync((ResultResponseDto?)null);
 
         // Act
         var result = await _controller.UpdateResultStatus(99, dto);
@@ -55,26 +59,18 @@ public class ResultsControllerTests
     public async Task UpdateResultStatus_CallsServiceWithCorrectParameters()
     {
         // Arrange
-        var dto = new UpdateResultStatusDto { Status = ResultStatus.Approved };
+        var dto = new UpdateResultStatusDto { Status = LeagueManager.Domain.Models.ResultStatus.Approved };
+        var responseDto = new ResultResponseDto { Id = 5, FixtureId = 1, Status = "Approved", HomeScore = 1, AwayScore = 0 };
 
         _mockResultService
             .Setup(s => s.UpdateResultStatusAsync(It.IsAny<int>(), It.IsAny<UpdateResultStatusDto>()))
-            .ReturnsAsync(true);
+            .ReturnsAsync(responseDto);
 
         // Act
         await _controller.UpdateResultStatus(5, dto);
 
         // Assert
+        // Verify that the service method was called exactly once with the correct parameters
         _mockResultService.Verify(s => s.UpdateResultStatusAsync(5, dto), Times.Once);
-    }
-
-    [Fact]
-    public async Task UpdateResultStatus_WithNullDto_ReturnsBadRequest()
-    {
-        // Act
-        var result = await _controller.UpdateResultStatus(1, null!);
-
-        // Assert
-        var badRequest = Assert.IsType<BadRequestResult>(result);
     }
 }

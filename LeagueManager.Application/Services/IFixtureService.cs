@@ -5,10 +5,10 @@ namespace LeagueManager.Application.Services;
 
 public interface IFixtureService
 {
-    Task<IEnumerable<Fixture>> GetAllFixturesAsync();
-    Task<Fixture?> GetFixtureByIdAsync(int id);
-    Task<Fixture> CreateFixtureAsync(CreateFixtureDto fixtureDto);
-    Task<Fixture?> UpdateFixtureAsync(int id, UpdateFixtureDto fixtureDto);
+    Task<IEnumerable<FixtureResponseDto>> GetAllFixturesAsync();
+    Task<FixtureResponseDto?> GetFixtureByIdAsync(int id);
+    Task<FixtureResponseDto> CreateFixtureAsync(CreateFixtureDto fixtureDto);
+    Task<FixtureResponseDto?> UpdateFixtureAsync(int id, UpdateFixtureDto fixtureDto);
     Task<Result> SubmitResultAsync(int fixtureId, SubmitResultDto resultDto);
     Task<bool> DeleteFixtureAsync(int id);
 }

@@ -1,3 +1,4 @@
+using AutoMapper;
 using LeagueManager.Application.Dtos;
 using LeagueManager.Application.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -18,8 +19,7 @@ public class FixturesController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetFixtures()
     {
-        var fixtures = await _fixtureService.GetAllFixturesAsync();
-        return Ok(fixtures);
+        return Ok(await _fixtureService.GetAllFixturesAsync());
     }
     
     [HttpGet("{id}")]
@@ -39,13 +39,7 @@ public class FixturesController : ControllerBase
         try
         {
             var newFixture = await _fixtureService.CreateFixtureAsync(createFixtureDto);
-            // We need to fetch the newly created fixture with its includes for the response
-            var createdFixture = await _fixtureService.GetFixtureByIdAsync(newFixture.Id);
-            if (createdFixture == null)
-            {
-                return StatusCode(500, "An error occurred while retrieving the created fixture.");
-            }
-            return CreatedAtAction(nameof(GetFixture), new { id = createdFixture.Id }, createdFixture);
+            return CreatedAtAction(nameof(GetFixture), new { id = newFixture.Id }, newFixture);
         }
         catch (ArgumentException ex)
         {

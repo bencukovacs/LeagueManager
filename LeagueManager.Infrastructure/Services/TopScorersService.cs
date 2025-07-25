@@ -1,7 +1,8 @@
-using LeagueManager.Infrastructure.Data;
+using AutoMapper;
 using LeagueManager.Application.Dtos;
-using LeagueManager.Domain.Models;
 using LeagueManager.Application.Services;
+using LeagueManager.Domain.Models;
+using LeagueManager.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace LeagueManager.Infrastructure.Services;
@@ -9,10 +10,12 @@ namespace LeagueManager.Infrastructure.Services;
 public class TopScorersService : ITopScorersService
 {
     private readonly LeagueDbContext _context;
+    private readonly IMapper _mapper; 
 
-    public TopScorersService(LeagueDbContext context)
+    public TopScorersService(LeagueDbContext context, IMapper mapper)
     {
         _context = context;
+        _mapper = mapper;
     }
 
     public async Task<IEnumerable<TopScorerDto>> GetTopScorersAsync()

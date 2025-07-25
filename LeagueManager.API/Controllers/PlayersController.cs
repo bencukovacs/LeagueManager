@@ -18,19 +18,19 @@ public class PlayersController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetPlayers()
     {
-        var players = await _playerService.GetAllPlayersAsync();
-        return Ok(players);
+        var playerDtos = await _playerService.GetAllPlayersAsync();
+        return Ok(playerDtos);
     }
 
     [HttpGet("{id}")]
     public async Task<IActionResult> GetPlayer(int id)
     {
-        var player = await _playerService.GetPlayerByIdAsync(id);
-        if (player == null)
+        var playerDto = await _playerService.GetPlayerByIdAsync(id);
+        if (playerDto == null)
         {
             return NotFound();
         }
-        return Ok(player);
+        return Ok(playerDto);
     }
 
     [HttpPost]
@@ -38,15 +38,27 @@ public class PlayersController : ControllerBase
     {
         try
         {
-            var newPlayer = await _playerService.CreatePlayerAsync(playerDto);
-            var createdPlayer = await _playerService.GetPlayerByIdAsync(newPlayer.Id);
-            return CreatedAtAction(nameof(GetPlayer), new { id = createdPlayer!.Id }, createdPlayer);
+            var createdPlayerDto = await _playerService.CreatePlayerAsync(playerDto);
+            return CreatedAtAction(nameof(GetPlayer), new { id = createdPlayerDto.Id }, createdPlayerDto);
         }
         catch (ArgumentException ex)
         {
             return BadRequest(ex.Message);
         }
     }
+
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdatePlayer(int id, [FromBody] PlayerDto playerDto)
+    {
+        var player = await _playerService.UpdatePlayerAsync(id, playerDto);
+        if (player == null)
+        {
+            return NotFound();
+        }
+        return NoContent();
+
+    }
+
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeletePlayer(int id)

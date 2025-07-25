@@ -18,8 +18,7 @@ public class TeamsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetTeams()
     {
-        var teams = await _teamService.GetAllTeamsAsync();
-        return Ok(teams);
+        return Ok(await _teamService.GetAllTeamsAsync());
     }
 
     [HttpGet("{id}")]
@@ -43,13 +42,11 @@ public class TeamsController : ControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateTeam(int id, [FromBody] CreateTeamDto updateTeamDto)
     {
-        var team = await _teamService.GetTeamByIdAsync(id);
+        var team = await _teamService.UpdateTeamAsync(id, updateTeamDto);
         if (team == null)
         {
             return NotFound();
         }
-
-        await _teamService.UpdateTeamAsync(id, updateTeamDto);
         return NoContent();
     }
 

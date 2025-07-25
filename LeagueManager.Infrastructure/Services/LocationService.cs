@@ -1,3 +1,4 @@
+using AutoMapper;
 using LeagueManager.Application.Dtos;
 using LeagueManager.Application.Services;
 using LeagueManager.Domain.Models;
@@ -9,37 +10,36 @@ namespace LeagueManager.Infrastructure.Services;
 public class LocationService : ILocationService
 {
     private readonly LeagueDbContext _context;
+    private readonly IMapper _mapper;
 
-    public LocationService(LeagueDbContext context)
+    public LocationService(LeagueDbContext context, IMapper mapper)
     {
         _context = context;
+        _mapper = mapper;
     }
 
-    public async Task<IEnumerable<Location>> GetAllLocationsAsync()
+    public async Task<IEnumerable<LocationResponseDto>> GetAllLocationsAsync()
     {
-        return await _context.Locations.ToListAsync();
+        var locations = await _context.Locations.ToListAsync();
+        return _mapper.Map<IEnumerable<LocationResponseDto>>(locations);
     }
 
-    public async Task<Location?> GetLocationByIdAsync(int id)
+    public async Task<LocationResponseDto?> GetLocationByIdAsync(int id)
     {
-        return await _context.Locations.FindAsync(id);
+        var location = await _context.Locations.FindAsync(id);
+        return _mapper.Map<LocationResponseDto>(location);
     }
 
-    public async Task<Location> CreateLocationAsync(LocationDto locationDto)
+    public async Task<LocationResponseDto> CreateLocationAsync(LocationDto locationDto)
     {
-        var location = new Location
-        {
-            Name = locationDto.Name,
-            Address = locationDto.Address,
-            PitchNumber = locationDto.PitchNumber
-        };
+        var location = _mapper.Map<Location>(locationDto);
 
         _context.Locations.Add(location);
         await _context.SaveChangesAsync();
-        return location;
+        return _mapper.Map<LocationResponseDto>(location);
     }
 
-    public async Task<Location?> UpdateLocationAsync(int id, LocationDto locationDto)
+    public async Task<LocationResponseDto?> UpdateLocationAsync(int id, LocationDto locationDto)
     {
         var location = await _context.Locations.FindAsync(id);
         if (location == null)
@@ -47,13 +47,10 @@ public class LocationService : ILocationService
             return null;
         }
 
-        location.Name = locationDto.Name;
-        location.Address = locationDto.Address;
-        location.PitchNumber = locationDto.PitchNumber;
-
-        _context.Entry(location).State = EntityState.Modified;
+        _mapper.Map(locationDto, location);
+        
         await _context.SaveChangesAsync();
-        return location;
+        return _mapper.Map<LocationResponseDto>(location);
     }
 
     public async Task<bool> DeleteLocationAsync(int id)

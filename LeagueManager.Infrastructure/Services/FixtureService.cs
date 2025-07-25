@@ -1,3 +1,5 @@
+using AutoMapper;
+using AutoMapper.QueryableExtensions;
 using LeagueManager.Application.Dtos;
 using LeagueManager.Application.Services;
 using LeagueManager.Domain.Models;
@@ -9,31 +11,30 @@ namespace LeagueManager.Infrastructure.Services;
 public class FixtureService : IFixtureService
 {
     private readonly LeagueDbContext _context;
+    private readonly IMapper _mapper;
 
-    public FixtureService(LeagueDbContext context)
+    public FixtureService(LeagueDbContext context, IMapper mapper)
     {
         _context = context;
+        _mapper = mapper;
     }
 
-    public async Task<IEnumerable<Fixture>> GetAllFixturesAsync()
+    public async Task<IEnumerable<FixtureResponseDto>> GetAllFixturesAsync()
     {
         return await _context.Fixtures
-            .Include(f => f.HomeTeam)
-            .Include(f => f.AwayTeam)
-            .Include(f => f.Location)
+            .ProjectTo<FixtureResponseDto>(_mapper.ConfigurationProvider)
             .ToListAsync();
     }
 
-    public async Task<Fixture?> GetFixtureByIdAsync(int id)
+    public async Task<FixtureResponseDto?> GetFixtureByIdAsync(int id)
     {
         return await _context.Fixtures
-            .Include(f => f.HomeTeam)
-            .Include(f => f.AwayTeam)
-            .Include(f => f.Location)
+            .Where(f => f.Id == id)
+            .ProjectTo<FixtureResponseDto>(_mapper.ConfigurationProvider)
             .FirstOrDefaultAsync(f => f.Id == id);
     }
 
-    public async Task<Fixture> CreateFixtureAsync(CreateFixtureDto fixtureDto)
+    public async Task<FixtureResponseDto> CreateFixtureAsync(CreateFixtureDto fixtureDto)
     {
         if (fixtureDto.HomeTeamId == fixtureDto.AwayTeamId)
         {
@@ -65,11 +66,11 @@ public class FixtureService : IFixtureService
         };
 
         _context.Fixtures.Add(fixture);
-        await _context.SaveChangesAsync();
-        return fixture;
+         return await GetFixtureByIdAsync(fixture.Id) 
+               ?? throw new InvalidOperationException("Could not retrieve created fixture.");
     }
 
-    public async Task<Fixture?> UpdateFixtureAsync(int id, UpdateFixtureDto fixtureDto)
+    public async Task<FixtureResponseDto?> UpdateFixtureAsync(int id, UpdateFixtureDto fixtureDto)
     {
         var fixture = await _context.Fixtures.FindAsync(id);
         if (fixture == null)
@@ -91,7 +92,7 @@ public class FixtureService : IFixtureService
 
         _context.Entry(fixture).State = EntityState.Modified;
         await _context.SaveChangesAsync();
-        return fixture;
+        return _mapper.Map<FixtureResponseDto>(fixture);
     }
 
     public async Task<bool> DeleteFixtureAsync(int id)

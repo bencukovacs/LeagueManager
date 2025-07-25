@@ -2,6 +2,7 @@ using LeagueManager.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using LeagueManager.Infrastructure.Services;
 using LeagueManager.Application.Services;
+using LeagueManager.Application.MappingProfiles;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,6 +18,8 @@ builder.Services.AddScoped<IFixtureService, FixtureService>();
 builder.Services.AddScoped<IPlayerService, PlayerService>();
 builder.Services.AddScoped<ILocationService, LocationService>();
 builder.Services.AddScoped<IResultService, ResultService>();
+
+builder.Services.AddAutoMapper(typeof(MappingProfile));
 
 var app = builder.Build();
 

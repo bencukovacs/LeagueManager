@@ -1,8 +1,10 @@
+using Moq;
+using AutoMapper;
 using LeagueManager.Infrastructure.Data;
 using LeagueManager.Domain.Models;
 using LeagueManager.Infrastructure.Services;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.Sqlite;
 
 namespace LeagueManager.Tests.Services;
 
@@ -10,15 +12,16 @@ public class TopScorersServiceTests : IDisposable
 {
     private readonly SqliteConnection _connection;
     private readonly DbContextOptions<LeagueDbContext> _options;
+    private readonly Mock<IMapper> _mockMapper;
 
     public TopScorersServiceTests()
     {
         _connection = new SqliteConnection("DataSource=:memory:");
         _connection.Open();
-
         _options = new DbContextOptionsBuilder<LeagueDbContext>()
             .UseSqlite(_connection)
             .Options;
+        _mockMapper = new Mock<IMapper>();
 
         using var context = new LeagueDbContext(_options);
         context.Database.EnsureCreated();
@@ -40,9 +43,9 @@ public class TopScorersServiceTests : IDisposable
         
         var team1 = new Team { Id = 1, Name = "Team A" };
         var team2 = new Team { Id = 2, Name = "Team B" };
-        var player1 = new Player { Id = 1, Name = "Player One", TeamId = 1 };
-        var player2 = new Player { Id = 2, Name = "Player Two", TeamId = 1 };
-        context.Teams.AddRange(team1, team2); // Add both teams
+        var player1 = new Player { Id = 1, Name = "Player One", TeamId = 1 }; // 2 goals
+        var player2 = new Player { Id = 2, Name = "Player Two", TeamId = 1 }; // 3 goals
+        context.Teams.AddRange(team1, team2);
         context.Players.AddRange(player1, player2);
 
         var fixture1 = new Fixture { Id = 1, HomeTeamId = 1, AwayTeamId = 2 };
@@ -57,7 +60,7 @@ public class TopScorersServiceTests : IDisposable
         context.Goals.Add(new Goal { FixtureId = 1, PlayerId = 2 });
 
         await context.SaveChangesAsync();
-        var service = new TopScorersService(context);
+        var service = new TopScorersService(context, _mockMapper.Object);
 
         // Act
         var topScorers = (await service.GetTopScorersAsync()).ToList();
@@ -77,10 +80,9 @@ public class TopScorersServiceTests : IDisposable
         await using var context = GetDbContext();
         
         var team1 = new Team { Id = 1, Name = "Team A" };
-        // *** FIX: Added Team B ***
         var team2 = new Team { Id = 2, Name = "Team B" };
         var player1 = new Player { Id = 1, Name = "Player One", TeamId = 1 };
-        context.Teams.AddRange(team1, team2); // Add both teams
+        context.Teams.AddRange(team1, team2);
         context.Players.Add(player1);
 
         var fixture1 = new Fixture { Id = 1, HomeTeamId = 1, AwayTeamId = 2 };
@@ -90,7 +92,7 @@ public class TopScorersServiceTests : IDisposable
         context.Goals.Add(new Goal { FixtureId = 1, PlayerId = 1 });
 
         await context.SaveChangesAsync();
-        var service = new TopScorersService(context);
+        var service = new TopScorersService(context, _mockMapper.Object);
 
         // Act
         var topScorers = (await service.GetTopScorersAsync()).ToList();

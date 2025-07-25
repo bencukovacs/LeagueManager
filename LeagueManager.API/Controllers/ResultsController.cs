@@ -15,17 +15,12 @@ public class ResultsController : ControllerBase
         _resultService = resultService;
     }
 
-    // PATCH: api/results/5/status
     [HttpPatch("{resultId}/status")]
     public async Task<IActionResult> UpdateResultStatus(int resultId, [FromBody] UpdateResultStatusDto statusDto)
     {
-        if (statusDto == null)
-        {
-            return BadRequest();
-        }
+        var result = await _resultService.UpdateResultStatusAsync(resultId, statusDto);
 
-        var updated = await _resultService.UpdateResultStatusAsync(resultId, statusDto);
-        if (!updated)
+        if (result == null)
         {
             return NotFound("Result not found.");
         }

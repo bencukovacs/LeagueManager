@@ -11,3 +11,10 @@ public class PlayerDto
   [Required]
   public int TeamId { get; set; }
 }
+
+public class PlayerResponseDto
+{
+  public int Id { get; set; }
+  public required string Name { get; set; }
+  public string? TeamName { get; set; }
+}

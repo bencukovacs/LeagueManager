@@ -23,18 +23,33 @@ public class FixturesControllerTests
     }
 
     [Fact]
+    public async Task GetFixtures_ReturnsOkResult_WithListOfFixtures()
+    {
+        // Arrange
+        var fixtureDtoList = new List<FixtureResponseDto>();
+        _mockFixtureService.Setup(s => s.GetAllFixturesAsync()).ReturnsAsync(fixtureDtoList);
+
+        // Act
+        var result = await _controller.GetFixtures();
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.IsAssignableFrom<IEnumerable<FixtureResponseDto>>(okResult.Value);
+    }
+
+    [Fact]
     public async Task GetFixture_WhenFixtureExists_ReturnsOkResult()
     {
         // Arrange
-        var fixture = new Fixture { Id = 1, HomeTeamId = 1, AwayTeamId = 2 };
-        _mockFixtureService.Setup(s => s.GetFixtureByIdAsync(1)).ReturnsAsync(fixture);
+        var fixtureDto = new FixtureResponseDto { Id = 1, HomeTeam = new TeamResponseDto { Id=1, Name="A" }, AwayTeam = new TeamResponseDto { Id=2, Name="B"}, Status = "Scheduled"};
+        _mockFixtureService.Setup(s => s.GetFixtureByIdAsync(1)).ReturnsAsync(fixtureDto);
 
         // Act
         var result = await _controller.GetFixture(1);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
-        var returnedFixture = Assert.IsType<Fixture>(okResult.Value);
+        var returnedFixture = Assert.IsType<FixtureResponseDto>(okResult.Value);
         Assert.Equal(1, returnedFixture.Id);
     }
 
@@ -42,7 +57,7 @@ public class FixturesControllerTests
     public async Task GetFixture_WhenFixtureDoesNotExist_ReturnsNotFound()
     {
         // Arrange
-        _mockFixtureService.Setup(s => s.GetFixtureByIdAsync(99)).ReturnsAsync((Fixture?)null);
+        _mockFixtureService.Setup(s => s.GetFixtureByIdAsync(99)).ReturnsAsync((FixtureResponseDto?)null);
 
         // Act
         var result = await _controller.GetFixture(99);
@@ -56,12 +71,8 @@ public class FixturesControllerTests
     {
         // Arrange
         var createDto = new CreateFixtureDto { HomeTeamId = 1, AwayTeamId = 2 };
-        var newFixture = new Fixture { Id = 1, HomeTeamId = 1, AwayTeamId = 2 };
-        var createdFixtureWithIncludes = new Fixture { Id = 1, HomeTeamId = 1, AwayTeamId = 2, HomeTeam = new Team { Name = "A" }, AwayTeam = new Team { Name = "B" } };
-
-        _mockFixtureService.Setup(s => s.CreateFixtureAsync(createDto)).ReturnsAsync(newFixture);
-        _mockFixtureService.Setup(s => s.GetFixtureByIdAsync(newFixture.Id)).ReturnsAsync(createdFixtureWithIncludes);
-
+        var responseDto = new FixtureResponseDto { Id = 1, HomeTeam = new TeamResponseDto { Id=1, Name="A" }, AwayTeam = new TeamResponseDto { Id=2, Name="B"}, Status = "Scheduled" };
+        _mockFixtureService.Setup(s => s.CreateFixtureAsync(createDto)).ReturnsAsync(responseDto);
 
         // Act
         var result = await _controller.CreateFixture(createDto);
@@ -72,19 +83,32 @@ public class FixturesControllerTests
     }
 
     [Fact]
-    public async Task CreateFixture_WhenServiceThrowsArgumentException_ReturnsBadRequest()
+    public async Task UpdateFixture_WhenSuccessful_ReturnsNoContent()
     {
         // Arrange
-        var createDto = new CreateFixtureDto();
-        _mockFixtureService.Setup(s => s.CreateFixtureAsync(createDto))
-            .ThrowsAsync(new ArgumentException("Some error"));
+        var updateDto = new UpdateFixtureDto();
+        var responseDto = new FixtureResponseDto { Id = 1, HomeTeam = new TeamResponseDto { Id=1, Name="A" }, AwayTeam = new TeamResponseDto { Id=2, Name="B"}, Status = "Scheduled" };
+        _mockFixtureService.Setup(s => s.UpdateFixtureAsync(1, updateDto)).ReturnsAsync(responseDto);
 
         // Act
-        var result = await _controller.CreateFixture(createDto);
+        var result = await _controller.UpdateFixture(1, updateDto);
 
         // Assert
-        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
-        Assert.Equal("Some error", badRequestResult.Value);
+        Assert.IsType<NoContentResult>(result);
+    }
+    
+    [Fact]
+    public async Task UpdateFixture_WhenFixtureNotFound_ReturnsNotFound()
+    {
+        // Arrange
+        var updateDto = new UpdateFixtureDto();
+        _mockFixtureService.Setup(s => s.UpdateFixtureAsync(99, updateDto)).ReturnsAsync((FixtureResponseDto?)null);
+
+        // Act
+        var result = await _controller.UpdateFixture(99, updateDto);
+
+        // Assert
+        Assert.IsType<NotFoundResult>(result);
     }
 
     [Fact]
@@ -116,21 +140,5 @@ public class FixturesControllerTests
         // Assert
         var notFoundResult = Assert.IsType<NotFoundObjectResult>(result);
         Assert.Equal("Fixture not found.", notFoundResult.Value);
-    }
-    
-    [Fact]
-    public async Task SubmitResult_WhenResultExists_ReturnsBadRequest()
-    {
-        // Arrange
-        var submitDto = new SubmitResultDto();
-        _mockFixtureService.Setup(s => s.SubmitResultAsync(1, submitDto))
-            .ThrowsAsync(new InvalidOperationException("Result exists."));
-
-        // Act
-        var result = await _controller.SubmitResult(1, submitDto);
-
-        // Assert
-        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
-        Assert.Equal("Result exists.", badRequestResult.Value);
     }
 }

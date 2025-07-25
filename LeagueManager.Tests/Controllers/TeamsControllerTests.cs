@@ -1,9 +1,12 @@
+using Xunit;
 using Moq;
 using LeagueManager.API.Controllers;
 using LeagueManager.Application.Services;
 using LeagueManager.Application.Dtos;
-using LeagueManager.Domain.Models;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using System;
 
 namespace LeagueManager.Tests.Controllers;
 
@@ -19,18 +22,33 @@ public class TeamsControllerTests
     }
 
     [Fact]
+    public async Task GetTeams_ReturnsOkResult_WithListOfTeams()
+    {
+        // Arrange
+        var teamDtoList = new List<TeamResponseDto> { new() { Id = 1, Name = "Team A" } };
+        _mockTeamService.Setup(s => s.GetAllTeamsAsync()).ReturnsAsync(teamDtoList);
+
+        // Act
+        var result = await _controller.GetTeams();
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.IsAssignableFrom<IEnumerable<TeamResponseDto>>(okResult.Value);
+    }
+
+    [Fact]
     public async Task GetTeam_WhenTeamExists_ReturnsOkResult()
     {
         // Arrange
-        var team = new Team { Id = 1, Name = "Test Team" };
-        _mockTeamService.Setup(service => service.GetTeamByIdAsync(1)).ReturnsAsync(team);
+        var teamDto = new TeamResponseDto { Id = 1, Name = "Test Team" };
+        _mockTeamService.Setup(service => service.GetTeamByIdAsync(1)).ReturnsAsync(teamDto);
 
         // Act
         var result = await _controller.GetTeam(1);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
-        var returnedTeam = Assert.IsType<Team>(okResult.Value);
+        var returnedTeam = Assert.IsType<TeamResponseDto>(okResult.Value);
         Assert.Equal(1, returnedTeam.Id);
     }
 
@@ -38,7 +56,7 @@ public class TeamsControllerTests
     public async Task GetTeam_WhenTeamDoesNotExist_ReturnsNotFound()
     {
         // Arrange
-        _mockTeamService.Setup(service => service.GetTeamByIdAsync(99)).ReturnsAsync((Team?)null);
+        _mockTeamService.Setup(service => service.GetTeamByIdAsync(99)).ReturnsAsync((TeamResponseDto?)null);
 
         // Act
         var result = await _controller.GetTeam(99);
@@ -52,8 +70,8 @@ public class TeamsControllerTests
     {
         // Arrange
         var createDto = new CreateTeamDto { Name = "New Team" };
-        var newTeam = new Team { Id = 1, Name = "New Team" };
-        _mockTeamService.Setup(service => service.CreateTeamAsync(createDto)).ReturnsAsync(newTeam);
+        var responseDto = new TeamResponseDto { Id = 1, Name = "New Team" };
+        _mockTeamService.Setup(service => service.CreateTeamAsync(createDto)).ReturnsAsync(responseDto);
 
         // Act
         var result = await _controller.CreateTeam(createDto);
@@ -63,6 +81,35 @@ public class TeamsControllerTests
         Assert.Equal("GetTeam", createdAtActionResult.ActionName);
         Assert.NotNull(createdAtActionResult.RouteValues);
         Assert.Equal(1, createdAtActionResult.RouteValues["id"]);
+    }
+
+    [Fact]
+    public async Task UpdateTeam_WhenSuccessful_ReturnsNoContent()
+    {
+        // Arrange
+        var updateDto = new CreateTeamDto { Name = "Updated Name" };
+        var responseDto = new TeamResponseDto { Id = 1, Name = "Updated Name" };
+        _mockTeamService.Setup(s => s.UpdateTeamAsync(1, updateDto)).ReturnsAsync(responseDto);
+
+        // Act
+        var result = await _controller.UpdateTeam(1, updateDto);
+
+        // Assert
+        Assert.IsType<NoContentResult>(result);
+    }
+
+    [Fact]
+    public async Task UpdateTeam_WhenTeamNotFound_ReturnsNotFound()
+    {
+        // Arrange
+        var updateDto = new CreateTeamDto { Name = "Updated Name" };
+        _mockTeamService.Setup(s => s.UpdateTeamAsync(99, updateDto)).ReturnsAsync((TeamResponseDto?)null);
+
+        // Act
+        var result = await _controller.UpdateTeam(99, updateDto);
+
+        // Assert
+        Assert.IsType<NotFoundResult>(result);
     }
 
     [Fact]
