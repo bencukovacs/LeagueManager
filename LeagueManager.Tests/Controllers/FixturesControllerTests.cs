@@ -41,7 +41,7 @@ public class FixturesControllerTests
     public async Task GetFixture_WhenFixtureExists_ReturnsOkResult()
     {
         // Arrange
-        var fixtureDto = new FixtureResponseDto { Id = 1, HomeTeam = new TeamResponseDto { Id=1, Name="A" }, AwayTeam = new TeamResponseDto { Id=2, Name="B"}, Status = "Scheduled"};
+        var fixtureDto = new FixtureResponseDto { Id = 1, HomeTeam = new TeamResponseDto { Id=1, Name="A", Status = "Approved" }, AwayTeam = new TeamResponseDto { Id=2, Name="B", Status = "Approved"}, Status = "Scheduled"};
         _mockFixtureService.Setup(s => s.GetFixtureByIdAsync(1)).ReturnsAsync(fixtureDto);
 
         // Act
@@ -71,7 +71,7 @@ public class FixturesControllerTests
     {
         // Arrange
         var createDto = new CreateFixtureDto { HomeTeamId = 1, AwayTeamId = 2 };
-        var responseDto = new FixtureResponseDto { Id = 1, HomeTeam = new TeamResponseDto { Id=1, Name="A" }, AwayTeam = new TeamResponseDto { Id=2, Name="B"}, Status = "Scheduled" };
+        var responseDto = new FixtureResponseDto { Id = 1, HomeTeam = new TeamResponseDto { Id=1, Name="A", Status = "Approved" }, AwayTeam = new TeamResponseDto { Id=2, Name="B", Status = "Approved" }, Status = "Scheduled" };
         _mockFixtureService.Setup(s => s.CreateFixtureAsync(createDto)).ReturnsAsync(responseDto);
 
         // Act
@@ -87,7 +87,7 @@ public class FixturesControllerTests
     {
         // Arrange
         var updateDto = new UpdateFixtureDto();
-        var responseDto = new FixtureResponseDto { Id = 1, HomeTeam = new TeamResponseDto { Id=1, Name="A" }, AwayTeam = new TeamResponseDto { Id=2, Name="B"}, Status = "Scheduled" };
+        var responseDto = new FixtureResponseDto { Id = 1, HomeTeam = new TeamResponseDto { Id=1, Name="A", Status = "Approved" }, AwayTeam = new TeamResponseDto { Id=2, Name="B", Status = "Approved" }, Status = "Scheduled" };
         _mockFixtureService.Setup(s => s.UpdateFixtureAsync(1, updateDto)).ReturnsAsync(responseDto);
 
         // Act

@@ -62,7 +62,7 @@ builder.Services.AddAuthentication(options =>
 .AddJwtBearer(options =>
 {
     var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()!;
-    
+
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
@@ -74,6 +74,13 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key))
     };
 });
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("CanManageTeam", policy =>
+        policy.RequireAuthenticatedUser());
+});
+
 
 
 builder.Services.AddControllers();

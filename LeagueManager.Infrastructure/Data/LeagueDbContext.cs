@@ -14,6 +14,7 @@ public class LeagueDbContext : IdentityDbContext<User>
     public DbSet<Location> Locations { get; set; }
     public DbSet<Result> Results { get; set; }
     public DbSet<Goal> Goals { get; set; }
+    public DbSet<TeamMembership> TeamMemberships { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

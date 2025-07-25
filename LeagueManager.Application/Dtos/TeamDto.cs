@@ -18,4 +18,5 @@ public class TeamResponseDto
     public required string Name { get; set; }
     public string? PrimaryColor { get; set; }
     public string? SecondaryColor { get; set; }
+    public required string Status { get; set; }
 }

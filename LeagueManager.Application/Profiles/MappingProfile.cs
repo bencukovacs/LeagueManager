@@ -15,7 +15,8 @@ public class MappingProfile : Profile
         CreateMap<Location, LocationResponseDto>();
         CreateMap<LocationDto, Location>();
 
-        CreateMap<Team, TeamResponseDto>();
+        CreateMap<Team, TeamResponseDto>()
+            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()));
         CreateMap<CreateTeamDto, Team>();
 
         CreateMap<Fixture, FixtureResponseDto>()

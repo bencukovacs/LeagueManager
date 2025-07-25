@@ -18,12 +18,14 @@ public class TeamsController : ControllerBase
     }
 
     [HttpGet]
+    [AllowAnonymous]
     public async Task<IActionResult> GetTeams()
     {
         return Ok(await _teamService.GetAllTeamsAsync());
     }
 
     [HttpGet("{id}")]
+    [AllowAnonymous]
     public async Task<IActionResult> GetTeam(int id)
     {
         var team = await _teamService.GetTeamByIdAsync(id);
@@ -35,13 +37,34 @@ public class TeamsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize]
     public async Task<IActionResult> CreateTeam([FromBody] CreateTeamDto createTeamDto)
     {
-        var newTeam = await _teamService.CreateTeamAsync(createTeamDto);
-        return CreatedAtAction(nameof(GetTeam), new { id = newTeam.Id }, newTeam);
+        try
+        {
+            var newTeam = await _teamService.CreateTeamAsync(createTeamDto);
+            return CreatedAtAction(nameof(GetTeam), new { id = newTeam.Id }, newTeam);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(ex.Message);
+        }
+    }
+
+    [HttpPatch("{id}/approve")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> ApproveTeam(int id)
+    {
+        var team = await _teamService.ApproveTeamAsync(id);
+        if (team == null)
+        {
+            return NotFound("Team not found.");
+        }
+        return Ok(team);
     }
 
     [HttpPut("{id}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> UpdateTeam(int id, [FromBody] CreateTeamDto updateTeamDto)
     {
         var team = await _teamService.UpdateTeamAsync(id, updateTeamDto);
@@ -53,6 +76,7 @@ public class TeamsController : ControllerBase
     }
 
     [HttpDelete("{id}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> DeleteTeam(int id)
     {
         var success = await _teamService.DeleteTeamAsync(id);
