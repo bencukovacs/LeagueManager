@@ -32,13 +32,12 @@ public class AuthController : ControllerBase
     [HttpPost("login")]
     public async Task<IActionResult> Login(LoginDto loginDto)
     {
-        var result = await _authService.LoginUserAsync(loginDto);
+        var token = await _authService.LoginUserAsync(loginDto);
 
-        if (result)
+        if (token != null)
         {
-            // For now, we'll return a simple success message.
-            // Later, we will return a JWT token here.
-            return Ok(new { Message = "Login successful" });
+            // Return the token in the response
+            return Ok(new { Token = token });
         }
 
         return Unauthorized(new { Message = "Invalid credentials" });

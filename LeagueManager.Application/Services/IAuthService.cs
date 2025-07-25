@@ -6,5 +6,5 @@ namespace LeagueManager.Application.Services;
 public interface IAuthService
 {
     Task<IdentityResult> RegisterUserAsync(RegisterDto registerDto);
-    Task<bool> LoginUserAsync(LoginDto loginDto);
+    Task<string?> LoginUserAsync(LoginDto loginDto);
 }
