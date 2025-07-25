@@ -1,11 +1,13 @@
 using LeagueManager.Application.Dtos;
 using LeagueManager.Application.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace LeagueManager.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class TeamsController : ControllerBase
 {
     private readonly ITeamService _teamService;
