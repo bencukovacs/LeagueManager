@@ -81,9 +81,12 @@ builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("CanManageTeam", policy =>
         policy.AddRequirements(new CanManageTeamRequirement()));
-    
+
     options.AddPolicy("CanUpdatePlayer", policy =>
         policy.AddRequirements(new CanUpdatePlayerRequirement()));
+
+    options.AddPolicy("CanSubmitResult", policy =>
+        policy.AddRequirements(new CanSubmitResultRequirement()));
 });
 
 
@@ -103,6 +106,7 @@ builder.Services.AddAutoMapper(typeof(MappingProfile));
 
 builder.Services.AddSingleton<IAuthorizationHandler, CanManageTeamHandler>();
 builder.Services.AddSingleton<IAuthorizationHandler, CanUpdatePlayerHandler>();
+builder.Services.AddSingleton<IAuthorizationHandler, CanSubmitResultHandler>();
 
 var app = builder.Build();
 

@@ -10,10 +10,12 @@ namespace LeagueManager.API.Controllers;
 public class FixturesController : ControllerBase
 {
     private readonly IFixtureService _fixtureService;
+    private readonly IAuthorizationService _authorizationService;
 
-    public FixturesController(IFixtureService fixtureService)
+    public FixturesController(IFixtureService fixtureService, IAuthorizationService authorizationService)
     {
         _fixtureService = fixtureService;
+        _authorizationService = authorizationService;
     }
 
     [HttpGet]
@@ -52,16 +54,25 @@ public class FixturesController : ControllerBase
     }
 
     [HttpPost("{fixtureId}/results")]
+    [Authorize]
     public async Task<IActionResult> SubmitResult(int fixtureId, [FromBody] SubmitResultDto resultDto)
     {
+        var fixture = await _fixtureService.GetFixtureByIdAsync(fixtureId);
+        if (fixture == null)
+        {
+            return NotFound("Fixture not found.");
+        }
+
+        var authorizationResult = await _authorizationService.AuthorizeAsync(User, fixture, "CanSubmitResult");
+        if (!authorizationResult.Succeeded)
+        {
+            return Forbid();
+        }
+
         try
         {
             var result = await _fixtureService.SubmitResultAsync(fixtureId, resultDto);
             return Ok(result);
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(ex.Message);
         }
         catch (InvalidOperationException ex)
         {
