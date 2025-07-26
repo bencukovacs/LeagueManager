@@ -39,71 +39,48 @@ public class PlayersController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize] // User must be logged in to create a player
+    [Authorize]
     public async Task<IActionResult> CreatePlayer([FromBody] PlayerDto playerDto)
     {
-        // Check if the user is authorized to manage the team they're adding a player to.
-        var authorizationResult = await _authorizationService.AuthorizeAsync(User, playerDto.TeamId, "CanManageTeam");
-        if (!authorizationResult.Succeeded)
-        {
-            return Forbid();
-        }
-
         try
         {
             var newPlayer = await _playerService.CreatePlayerAsync(playerDto);
             return CreatedAtAction(nameof(GetPlayer), new { id = newPlayer.Id }, newPlayer);
         }
-        catch (ArgumentException ex)
+        catch (ArgumentException ex) { return BadRequest(ex.Message); }
+        catch (UnauthorizedAccessException ex) { return Forbid(ex.Message); }
+    }
+
+    [HttpDelete("{id}")]
+    [Authorize]
+    public async Task<IActionResult> DeletePlayer(int id)
+    {
+        try
         {
-            return BadRequest(ex.Message);
+            await _playerService.DeletePlayerAsync(id);
+            return NoContent();
         }
+        catch (KeyNotFoundException ex) { return NotFound(ex.Message); }
+        catch (UnauthorizedAccessException ex) { return Forbid(ex.Message); }
     }
 
     [HttpPut("{id}")]
     [Authorize]
     public async Task<IActionResult> UpdatePlayer(int id, [FromBody] PlayerDto playerDto)
     {
-        var player = await _playerService.GetPlayerByIdAsync(id);
-        if (player == null)
+        var playerDomainModel = await _playerService.GetDomainPlayerByIdAsync(id);
+        if (playerDomainModel == null)
         {
             return NotFound();
         }
 
-        var authorizationResult = await _authorizationService.AuthorizeAsync(User, player.TeamId, "CanManageTeam");
+        var authorizationResult = await _authorizationService.AuthorizeAsync(User, playerDomainModel, "CanUpdatePlayer");
         if (!authorizationResult.Succeeded)
         {
             return Forbid();
         }
 
-        var updatedPlayer = await _playerService.UpdatePlayerAsync(id, playerDto);
-        return Ok(updatedPlayer);
-    }
-
-    [HttpDelete("{id}")]
-    [Authorize] // User must be logged in to delete a player
-    public async Task<IActionResult> DeletePlayer(int id)
-    {
-        // First, find the player to get their teamId
-        var player = await _playerService.GetPlayerByIdAsync(id);
-        if (player == null)
-        {
-            return NotFound();
-        }
-
-        // Now, check if the user is authorized to manage that player's team.
-        var authorizationResult = await _authorizationService.AuthorizeAsync(User, player.TeamId, "CanManageTeam");
-        if (!authorizationResult.Succeeded)
-        {
-            return Forbid();
-        }
-
-        var success = await _playerService.DeletePlayerAsync(id);
-        if (!success)
-        {
-            // This case should be rare if the first check passed
-            return NotFound();
-        }
-        return NoContent();
+        var updatedPlayerDto = await _playerService.UpdatePlayerAsync(id, playerDto);
+        return Ok(updatedPlayerDto);
     }
 }

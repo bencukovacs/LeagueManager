@@ -79,9 +79,11 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization(options =>
 {
-    // This policy will now use our custom requirement and handler
     options.AddPolicy("CanManageTeam", policy =>
         policy.AddRequirements(new CanManageTeamRequirement()));
+    
+    options.AddPolicy("CanUpdatePlayer", policy =>
+        policy.AddRequirements(new CanUpdatePlayerRequirement()));
 });
 
 
@@ -100,6 +102,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 
 builder.Services.AddSingleton<IAuthorizationHandler, CanManageTeamHandler>();
+builder.Services.AddSingleton<IAuthorizationHandler, CanUpdatePlayerHandler>();
 
 var app = builder.Build();
 

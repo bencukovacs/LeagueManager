@@ -9,5 +9,6 @@ public interface IPlayerService
     Task<PlayerResponseDto?> GetPlayerByIdAsync(int id);
     Task<PlayerResponseDto> CreatePlayerAsync(PlayerDto playerDto);
     Task<PlayerResponseDto?> UpdatePlayerAsync(int id, PlayerDto playerDto);
-    Task<bool> DeletePlayerAsync(int id);
+    Task DeletePlayerAsync(int id);
+    Task<Player?> GetDomainPlayerByIdAsync(int id);
 }

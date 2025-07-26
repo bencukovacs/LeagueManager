@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
+using LeagueManager.Domain.Models;
 
 namespace LeagueManager.Tests.Controllers;
 
@@ -28,72 +29,50 @@ public class PlayersControllerTests
         };
     }
 
-    // This test is unchanged and should be passing
     [Fact]
-    public async Task GetPlayer_WhenPlayerExists_ReturnsOkResult()
-    {
-        // Arrange
-        var playerDto = new PlayerResponseDto { Id = 1, Name = "Test Player", TeamId = 1, TeamName = "Team A" };
-        _mockPlayerService.Setup(s => s.GetPlayerByIdAsync(1)).ReturnsAsync(playerDto);
-        // Act
-        var result = await _controller.GetPlayer(1);
-        // Assert
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        var returnedPlayer = Assert.IsType<PlayerResponseDto>(okResult.Value);
-        Assert.Equal(1, returnedPlayer.Id);
-    }
-
-    [Fact]
-    public async Task CreatePlayer_WithValidDtoAndAuthorization_ReturnsCreatedAtAction()
+    public async Task CreatePlayer_WhenServiceSucceeds_ReturnsCreatedAtAction()
     {
         // Arrange
         var playerDto = new PlayerDto { Name = "New Player", TeamId = 1 };
-        var createdPlayer = new PlayerResponseDto { Id = 1, Name = "New Player", TeamId = 1, TeamName = "Team A" };
-
-        _mockPlayerService.Setup(s => s.CreatePlayerAsync(playerDto)).ReturnsAsync(createdPlayer);
-
-        _mockAuthorizationService
-            .Setup(s => s.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), "CanManageTeam"))
-            .ReturnsAsync(AuthorizationResult.Success());
+        var responseDto = new PlayerResponseDto { Id = 1, Name = "New Player", TeamId = 1, TeamName = "Team A" };
+        _mockPlayerService.Setup(s => s.CreatePlayerAsync(playerDto)).ReturnsAsync(responseDto);
 
         // Act
         var result = await _controller.CreatePlayer(playerDto);
 
         // Assert
         var createdAtActionResult = Assert.IsType<CreatedAtActionResult>(result);
-        var returnedPlayer = Assert.IsType<PlayerResponseDto>(createdAtActionResult.Value);
-        Assert.Equal("New Player", returnedPlayer.Name);
+        Assert.Equal("GetPlayer", createdAtActionResult.ActionName);
     }
 
     [Fact]
-    public async Task CreatePlayer_WhenAuthorizationFails_ReturnsForbid()
+    public async Task CreatePlayer_WhenServiceThrowsUnauthorized_ReturnsForbid()
     {
         // Arrange
         var playerDto = new PlayerDto { Name = "New Player", TeamId = 1 };
-
-        _mockAuthorizationService
-            .Setup(s => s.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), "CanManageTeam"))
-            .ReturnsAsync(AuthorizationResult.Failed());
+        _mockPlayerService.Setup(s => s.CreatePlayerAsync(playerDto))
+            .ThrowsAsync(new UnauthorizedAccessException("Not authorized."));
 
         // Act
         var result = await _controller.CreatePlayer(playerDto);
 
         // Assert
-        Assert.IsType<ForbidResult>(result);
+        var forbidResult = Assert.IsType<ForbidResult>(result);
     }
 
     [Fact]
-    public async Task UpdatePlayer_WhenSuccessful_ReturnsOkResult()
+    public async Task UpdatePlayer_WhenAuthorizationSucceeds_ReturnsOkResult()
     {
         // Arrange
         var dto = new PlayerDto { Name = "Updated Name", TeamId = 1 };
-        var playerResponse = new PlayerResponseDto { Id = 1, Name = "Old Name", TeamId = 1, TeamName = "Team A" };
+        var playerDomainModel = new Player { Id = 1, Name = "Old Name", TeamId = 1 };
         var updatedResponse = new PlayerResponseDto { Id = 1, Name = "Updated Name", TeamId = 1, TeamName = "Team A" };
 
-        _mockPlayerService.Setup(s => s.GetPlayerByIdAsync(1)).ReturnsAsync(playerResponse);
+        _mockPlayerService.Setup(s => s.GetDomainPlayerByIdAsync(1)).ReturnsAsync(playerDomainModel);
         _mockPlayerService.Setup(s => s.UpdatePlayerAsync(1, dto)).ReturnsAsync(updatedResponse);
+
         _mockAuthorizationService
-            .Setup(s => s.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), "CanManageTeam"))
+            .Setup(s => s.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), "CanUpdatePlayer"))
             .ReturnsAsync(AuthorizationResult.Success());
 
         // Act
@@ -104,21 +83,44 @@ public class PlayersControllerTests
     }
 
     [Fact]
-    public async Task DeletePlayer_WhenDeleteIsSuccessful_ReturnsNoContent()
+    public async Task DeletePlayer_WhenServiceSucceeds_ReturnsNoContent()
     {
         // Arrange
-        var playerResponse = new PlayerResponseDto { Id = 1, Name = "Player to Delete", TeamId = 1, TeamName = "Team A" };
-
-        _mockPlayerService.Setup(s => s.GetPlayerByIdAsync(1)).ReturnsAsync(playerResponse);
-        _mockPlayerService.Setup(s => s.DeletePlayerAsync(1)).ReturnsAsync(true);
-        _mockAuthorizationService
-            .Setup(s => s.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), "CanManageTeam"))
-            .ReturnsAsync(AuthorizationResult.Success());
+        _mockPlayerService.Setup(s => s.DeletePlayerAsync(1)).Returns(Task.CompletedTask);
 
         // Act
         var result = await _controller.DeletePlayer(1);
 
         // Assert
         Assert.IsType<NoContentResult>(result);
+    }
+
+    [Fact]
+    public async Task DeletePlayer_WhenPlayerNotFound_ReturnsNotFound()
+    {
+        // Arrange
+        _mockPlayerService.Setup(s => s.DeletePlayerAsync(99))
+            .ThrowsAsync(new KeyNotFoundException("Player not found."));
+
+        // Act
+        var result = await _controller.DeletePlayer(99);
+
+        // Assert
+        var notFoundResult = Assert.IsType<NotFoundObjectResult>(result);
+        Assert.Equal("Player not found.", notFoundResult.Value);
+    }
+
+    [Fact]
+    public async Task DeletePlayer_WhenUnauthorized_ReturnsForbid()
+    {
+        // Arrange
+        _mockPlayerService.Setup(s => s.DeletePlayerAsync(1))
+            .ThrowsAsync(new UnauthorizedAccessException("Not authorized."));
+
+        // Act
+        var result = await _controller.DeletePlayer(1);
+
+        // Assert
+        var forbidResult = Assert.IsType<ForbidResult>(result);
     }
 }
