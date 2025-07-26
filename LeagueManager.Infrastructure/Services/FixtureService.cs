@@ -66,7 +66,9 @@ public class FixtureService : IFixtureService
         };
 
         _context.Fixtures.Add(fixture);
-         return await GetFixtureByIdAsync(fixture.Id) 
+        await _context.SaveChangesAsync();
+
+        return await GetFixtureByIdAsync(fixture.Id)
                ?? throw new InvalidOperationException("Could not retrieve created fixture.");
     }
 
@@ -92,7 +94,7 @@ public class FixtureService : IFixtureService
 
         _context.Entry(fixture).State = EntityState.Modified;
         await _context.SaveChangesAsync();
-        return _mapper.Map<FixtureResponseDto>(fixture);
+        return await GetFixtureByIdAsync(id);
     }
 
     public async Task<bool> DeleteFixtureAsync(int id)

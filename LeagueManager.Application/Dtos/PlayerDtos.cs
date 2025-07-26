@@ -16,5 +16,6 @@ public class PlayerResponseDto
 {
   public int Id { get; set; }
   public required string Name { get; set; }
+  public int TeamId { get; set; }
   public string? TeamName { get; set; }
 }

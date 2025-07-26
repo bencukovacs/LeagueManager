@@ -1,4 +1,5 @@
 using LeagueManager.Application.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LeagueManager.API.Controllers;
@@ -15,6 +16,7 @@ public class LeagueTableController : ControllerBase
     }
 
     [HttpGet]
+    [AllowAnonymous]
     public async Task<IActionResult> Get()
     {
         var table = await _leagueTableService.GetLeagueTableAsync();

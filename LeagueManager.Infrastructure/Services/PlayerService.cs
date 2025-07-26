@@ -52,15 +52,20 @@ public class PlayerService : IPlayerService
 
     public async Task<PlayerResponseDto?> UpdatePlayerAsync(int id, PlayerDto playerDto)
     {
-        var player = await _context.Players.FindAsync(id);
+        var player = await _context.Players
+            .Include(p => p.Team)
+            .Include(p => p.User)
+            .FirstOrDefaultAsync(p => p.Id == id);
+
         if (player == null)
         {
             return null;
         }
 
-        _mapper.Map(playerDto, player);
+        player.Name = playerDto.Name;
         
         await _context.SaveChangesAsync();
+
         return _mapper.Map<PlayerResponseDto>(player);
     }
 

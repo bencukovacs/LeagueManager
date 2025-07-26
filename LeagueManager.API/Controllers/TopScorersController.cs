@@ -1,4 +1,5 @@
 using LeagueManager.Application.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LeagueManager.API.Controllers;
@@ -14,8 +15,9 @@ public class TopScorersController : ControllerBase
         _topScorersService = topScorersService;
     }
 
-  // GET: api/topscorers
-  [HttpGet]
+    // GET: api/topscorers
+    [HttpGet]
+    [AllowAnonymous]
     public async Task<IActionResult> GetTopScorers()
     {
         var topScorers = await _topScorersService.GetTopScorersAsync();

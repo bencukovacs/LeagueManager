@@ -1,5 +1,6 @@
 using LeagueManager.Application.Dtos;
 using LeagueManager.Application.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LeagueManager.API.Controllers;
@@ -16,6 +17,7 @@ public class FixturesController : ControllerBase
     }
 
     [HttpGet]
+    [AllowAnonymous]
     public async Task<IActionResult> GetFixtures()
     {
         var fixtures = await _fixtureService.GetAllFixturesAsync();
@@ -23,6 +25,7 @@ public class FixturesController : ControllerBase
     }
 
     [HttpGet("{id}")]
+    [AllowAnonymous]
     public async Task<IActionResult> GetFixture(int id)
     {
         var fixture = await _fixtureService.GetFixtureByIdAsync(id);
@@ -34,6 +37,7 @@ public class FixturesController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> CreateFixture([FromBody] CreateFixtureDto createFixtureDto)
     {
         try
@@ -50,7 +54,7 @@ public class FixturesController : ControllerBase
     [HttpPost("{fixtureId}/results")]
     public async Task<IActionResult> SubmitResult(int fixtureId, [FromBody] SubmitResultDto resultDto)
     {
-       try
+        try
         {
             var result = await _fixtureService.SubmitResultAsync(fixtureId, resultDto);
             return Ok(result);
@@ -66,6 +70,7 @@ public class FixturesController : ControllerBase
     }
 
     [HttpPut("{id}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> UpdateFixture(int id, [FromBody] UpdateFixtureDto updateFixtureDto)
     {
         try
@@ -84,6 +89,7 @@ public class FixturesController : ControllerBase
     }
 
     [HttpDelete("{id}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> DeleteFixture(int id)
     {
         var success = await _fixtureService.DeleteFixtureAsync(id);

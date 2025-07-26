@@ -1,5 +1,6 @@
 using LeagueManager.Application.Dtos;
 using LeagueManager.Application.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LeagueManager.API.Controllers;
@@ -16,6 +17,7 @@ public class LocationsController : ControllerBase
     }
 
     [HttpGet]
+    [AllowAnonymous]
     public async Task<IActionResult> GetLocations()
     {
         var locations = await _locationService.GetAllLocationsAsync();
@@ -23,6 +25,7 @@ public class LocationsController : ControllerBase
     }
 
     [HttpGet("{id}")]
+    [AllowAnonymous]
     public async Task<IActionResult> GetLocation(int id)
     {
         var location = await _locationService.GetLocationByIdAsync(id);
@@ -34,6 +37,7 @@ public class LocationsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> CreateLocation([FromBody] LocationDto locationDto)
     {
         var newLocation = await _locationService.CreateLocationAsync(locationDto);
@@ -41,6 +45,7 @@ public class LocationsController : ControllerBase
     }
 
     [HttpPut("{id}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> UpdateLocation(int id, [FromBody] LocationDto locationDto)
     {
         var location = await _locationService.UpdateLocationAsync(id, locationDto);
@@ -52,6 +57,7 @@ public class LocationsController : ControllerBase
     }
 
     [HttpDelete("{id}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> DeleteLocation(int id)
     {
         var success = await _locationService.DeleteLocationAsync(id);

@@ -1,5 +1,6 @@
 using LeagueManager.Application.Dtos;
 using LeagueManager.Application.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LeagueManager.API.Controllers;
@@ -16,6 +17,7 @@ public class ResultsController : ControllerBase
     }
 
     [HttpPatch("{resultId}/status")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> UpdateResultStatus(int resultId, [FromBody] UpdateResultStatusDto statusDto)
     {
         var result = await _resultService.UpdateResultStatusAsync(resultId, statusDto);
