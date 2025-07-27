@@ -38,4 +38,4 @@ jobs:
 
       # Step 5: Runs all the tests in the solution
       - name: Run tests
-        run: dotnet test LeagueManager.sln --no-build --verbosity normal
+        run: dotnet test LeagueManager.sln --configuration Release --no-build --verbosity normal
