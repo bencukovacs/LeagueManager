@@ -57,12 +57,19 @@ public class TeamsController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> ApproveTeam(int id)
     {
-        var team = await _teamService.ApproveTeamAsync(id);
-        if (team == null)
+        try
         {
-            return NotFound("Team not found.");
+            var team = await _teamService.ApproveTeamAsync(id);
+            if (team == null)
+            {
+                return NotFound("Team not found.");
+            }
+            return Ok(team);
         }
-        return Ok(team);
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 
     [HttpPut("{id}")]

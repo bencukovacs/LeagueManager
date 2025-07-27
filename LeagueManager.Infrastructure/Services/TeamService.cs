@@ -73,6 +73,19 @@ public class TeamService : ITeamService
             return null;
         }
 
+        const int MinPlayersRequired = 6;
+        var playerCount = await _context.Players.CountAsync(p => p.TeamId == teamId);
+
+        if (playerCount < MinPlayersRequired)
+        {
+            throw new InvalidOperationException($"Team cannot be approved. It has {playerCount} players but requires at least {MinPlayersRequired}.");
+        }
+
+        if (string.IsNullOrWhiteSpace(team.PrimaryColor))
+        {
+            throw new InvalidOperationException("Team cannot be approved. A primary color must be set.");
+        }
+
         team.Status = TeamStatus.Approved;
         await _context.SaveChangesAsync();
 

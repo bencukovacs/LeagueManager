@@ -139,6 +139,38 @@ public class TeamsControllerTests
     }
 
     [Fact]
+    public async Task ApproveTeam_WhenTeamHasTooFewPlayers_ReturnsBadRequest()
+    {
+        // Arrange
+        var expectedErrorMessage = "Team cannot be approved. It has 2 players but requires at least 5.";
+        _mockTeamService.Setup(s => s.ApproveTeamAsync(1))
+            .ThrowsAsync(new InvalidOperationException(expectedErrorMessage));
+
+        // Act
+        var result = await _controller.ApproveTeam(1);
+
+        // Assert
+        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal(expectedErrorMessage, badRequestResult.Value);
+    }
+
+    [Fact]
+    public async Task ApproveTeam_WhenTeamIsMissingColor_ReturnsBadRequest()
+    {
+        // Arrange
+        var expectedErrorMessage = "Team cannot be approved. A primary color must be set.";
+        _mockTeamService.Setup(s => s.ApproveTeamAsync(1))
+            .ThrowsAsync(new InvalidOperationException(expectedErrorMessage));
+
+        // Act
+        var result = await _controller.ApproveTeam(1);
+
+        // Assert
+        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal(expectedErrorMessage, badRequestResult.Value);
+    }
+
+    [Fact]
     public async Task UpdateTeam_WhenAuthorizationSucceeds_ReturnsNoContent()
     {
         // Arrange
