@@ -59,9 +59,47 @@ public class FixturesControllerTests
     }
 
     [Fact]
+    public async Task GetMomVotes_WhenVotesExist_ReturnsOkResultWithVotes()
+    {
+        var fakeVotes = new List<MomVoteResponseDto>
+        {
+            new MomVoteResponseDto 
+            { 
+                VotingTeamName = "Team A", 
+                VotedForOwnPlayerName = "Player A1", 
+                VotedForOpponentPlayerName = "Player B1" 
+            }
+        };
+
+        _mockFixtureService
+            .Setup(s => s.GetMomVotesForFixtureAsync(1))
+            .ReturnsAsync(fakeVotes);
+
+        var result = await _controller.GetMomVotes(1);
+
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var returnedVotes = Assert.IsAssignableFrom<IEnumerable<MomVoteResponseDto>>(okResult.Value);
+        Assert.Single(returnedVotes);
+    }
+
+    [Fact]
+    public async Task GetMomVotes_WhenNoVotesExist_ReturnsOkResultWithEmptyList()
+    {
+        var fakeEmptyVotes = new List<MomVoteResponseDto>();
+        _mockFixtureService
+            .Setup(s => s.GetMomVotesForFixtureAsync(1))
+            .ReturnsAsync(fakeEmptyVotes);
+
+        var result = await _controller.GetMomVotes(1);
+
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var returnedVotes = Assert.IsAssignableFrom<IEnumerable<MomVoteResponseDto>>(okResult.Value);
+        Assert.Empty(returnedVotes);
+    }
+
+    [Fact]
     public async Task CreateFixture_WhenSuccessful_ReturnsCreatedAtAction()
     {
-        // Arrange
         var createDto = new CreateFixtureDto { HomeTeamId = 1, AwayTeamId = 2 };
         var responseDto = new FixtureResponseDto { Id = 1, HomeTeam = new TeamResponseDto { Id = 1, Name = "A", Status = "Approved" }, AwayTeam = new TeamResponseDto { Id = 2, Name = "B", Status = "Approved" }, Status = "Scheduled" };
         _mockFixtureService.Setup(s => s.CreateFixtureAsync(createDto)).ReturnsAsync(responseDto);
@@ -106,31 +144,12 @@ public class FixturesControllerTests
     public async Task SubmitResult_WhenAuthorizationSucceeds_ReturnsOkResult()
     {
         // Arrange
-        // --- ARRANGE ---
-// 1. Create the teams and fixture
-var teamA = new Team { Id = 1, Name = "Team A" };
-var teamB = new Team { Id = 2, Name = "Team B" };
-var fixture = new Fixture { Id = 1, HomeTeamId = 1, AwayTeamId = 2 };
-
-// 2. Create players for EACH team
-var playerFromTeamA = new Player { Id = 10, Name = "Player A", TeamId = 1 };
-var playerFromTeamB = new Player { Id = 20, Name = "Player B", TeamId = 2 };
-
-// 3. Create a user who is the leader of Team A
-var user = new User { Id = "user-123" };
-var membership = new TeamMembership { UserId = "user-123", TeamId = 1, Role = TeamRole.Leader };
-
-// 4. Create the DTO with the CORRECT player IDs
-var submitDto = new SubmitResultDto
-{
-    HomeScore = 1,
-    AwayScore = 0,
-    MomVote = new MomVoteDto 
-    {
-        VotedForOwnPlayerId = 10,     // Player from Team A (submitter's team)
-        VotedForOpponentPlayerId = 20 // Player from Team B (opponent's team)
-    }
-};
+        var submitDto = new SubmitResultDto
+        {
+            HomeScore = 1,
+            AwayScore = 0,
+            MomVote = new MomVoteDto { VotedForOwnPlayerId = 1, VotedForOpponentPlayerId = 2 }
+        };
         var fixtureDto = new FixtureResponseDto { Id = 1, HomeTeam = new TeamResponseDto { Id = 1, Name = "A", Status = "Approved" }, AwayTeam = new TeamResponseDto { Id = 2, Name = "B", Status = "Approved" }, Status = "Scheduled" };
         var newResult = new Result { Id = 1, FixtureId = 1 };
 

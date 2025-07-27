@@ -39,6 +39,18 @@ public class FixtureService : IFixtureService
             .FirstOrDefaultAsync(f => f.Id == id);
     }
 
+        public async Task<IEnumerable<MomVoteResponseDto>> GetMomVotesForFixtureAsync(int fixtureId)
+    {
+        var votes = await _context.MOMVotes
+            .Where(v => v.FixtureId == fixtureId)
+            .Include(v => v.VotingTeam)
+            .Include(v => v.VotedForOwnPlayer)
+            .Include(v => v.VotedForOpponentPlayer)
+            .ToListAsync();
+
+        return _mapper.Map<IEnumerable<MomVoteResponseDto>>(votes);
+    }
+
     public async Task<FixtureResponseDto> CreateFixtureAsync(CreateFixtureDto fixtureDto)
     {
         if (fixtureDto.HomeTeamId == fixtureDto.AwayTeamId)
@@ -84,7 +96,7 @@ public class FixtureService : IFixtureService
         {
             return null;
         }
-        
+
         if (fixtureDto.LocationId.HasValue)
         {
             var locationExists = await _context.Locations.AnyAsync(l => l.Id == fixtureDto.LocationId.Value);
@@ -146,7 +158,7 @@ public class FixtureService : IFixtureService
             }
         }
 
-         if (resultDto.MomVote != null)
+        if (resultDto.MomVote != null)
         {
             // Find which team the current user is a manager of for this fixture
             var userMembership = await _context.TeamMemberships.FirstOrDefaultAsync(m =>

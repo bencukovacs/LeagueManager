@@ -11,4 +11,6 @@ public interface IFixtureService
     Task<FixtureResponseDto?> UpdateFixtureAsync(int id, UpdateFixtureDto fixtureDto);
     Task<Result> SubmitResultAsync(int fixtureId, SubmitResultDto resultDto);
     Task<bool> DeleteFixtureAsync(int id);
+    Task<IEnumerable<MomVoteResponseDto>> GetMomVotesForFixtureAsync(int fixtureId);
+
 }

@@ -38,6 +38,14 @@ public class FixturesController : ControllerBase
         return Ok(fixture);
     }
 
+    [HttpGet("{fixtureId}/mom-votes")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetMomVotes(int fixtureId)
+    {
+        var votes = await _fixtureService.GetMomVotesForFixtureAsync(fixtureId);
+        return Ok(votes);
+    }
+
     [HttpPost]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> CreateFixture([FromBody] CreateFixtureDto createFixtureDto)
