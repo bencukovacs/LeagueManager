@@ -103,3 +103,6 @@ node_modules/
 # Mac/Linux files
 .DS_Store
 ._*
+
+# Environment variables file
+.env

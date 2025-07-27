@@ -20,22 +20,21 @@ This is the backend API for a web application designed to manage an amateur or c
 2. **Clone Repository:**
 
     ```bash
-    git clone https://github.com/bencukovacs/LeagueManager/tree/main
+    git clone https://github.com/bencukovacs/LeagueManager.git
     ```
 
-3. **Configure Database:**
-    * Navigate to the project root in your terminal.
-    * Start the PostgreSQL database container:
+3. **Configure Local Secrets:**
+    * **Database:** In the project's root directory, create a copy of the `.env.example` file and name it `.env`. Open this new `.env` file and set your desired local database password.
+    * **Application:** In the `LeagueManager.API` directory, create a copy of the `appsettings.Example.json` file and name it `appsettings.Development.json`. Open this new file and fill in the placeholder values for the JWT key and the admin password.
+4. **Run Application:**
+    * Navigate to the project's root directory in your terminal.
+    * Run the following command. This will build the API image and start both the API and database containers.
 
         ```bash
-        docker run --name league-db -e POSTG-RES_USER=postgres -e POSTGRES_PASSWORD=postgres -p 5433:5432 -d postgres
+        docker compose up --build
         ```
 
-    * Ensure the connection string in `appsettings.Development.json` matches the user, password, and port (`5433`).
-4. **Run Application:**
-    * Navigate to the `LeagueManager` directory.
-    * Run `dotnet run` to start the API.
-    * The API will be available at the URLs specified in the launch profile (e.g., `http://localhost:5166`).
+    * The API will be available at `http://localhost:8080/swagger`.
 
 ---
 
