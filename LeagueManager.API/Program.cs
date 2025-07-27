@@ -13,6 +13,9 @@ using LeagueManager.Application.Settings;
 using Microsoft.OpenApi.Models;
 using LeagueManager.API.Authorization;
 using Microsoft.AspNetCore.Authorization;
+using FluentValidation.AspNetCore;
+using FluentValidation;
+using LeagueManager.Application.Validators;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -92,6 +95,18 @@ builder.Services.AddAuthorization(options =>
 
 
 builder.Services.AddControllers();
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddValidatorsFromAssemblyContaining<CreateTeamDtoValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<RegisterDtoValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<LoginDtoValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<PlayerDtoValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<LocationDtoValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<CreateFixtureDtoValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<UpdateFixtureDtoValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<SubmitResultDtoValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<MomVoteDtoValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<GoalscorerDtoValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<UpdateResultStatusDtoValidator>();
 
 builder.Services.AddScoped<ILeagueTableService, LeagueTableService>();
 builder.Services.AddScoped<ITopScorersService, TopScorersService>();
