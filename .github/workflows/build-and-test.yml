@@ -1,55 +1,94 @@
-# Name of the workflow, which will be displayed on the Actions tab in GitHub
-name: .NET Build and Test
+# Name of the workflow
+name: .NET CI/CD
 
-# Controls when the workflow will run
+# NEW: Trigger on pushes to main AND on pull requests to main
 on:
-  # Triggers the workflow on push events but only for the "main" branch
   push:
     branches: [ "main" ]
-  # Allows you to run this workflow manually from the Actions tab
+  pull_request:
+    branches: [ "main" ]
   workflow_dispatch:
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This job is named "build-and-test"
-  build-and-test:
-    # The type of runner that the job will run on
+  build-test-push:
     runs-on: ubuntu-latest
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Step 1: Checks out your repository under $GITHUB_WORKSPACE, so your job can access it
+      # --- SETUP STEPS ---
+      
+      # Step 1: Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          # Required for SonarCloud to analyze history
+          fetch-depth: 0
 
-      # Step 2: Sets up the .NET 8 SDK on the runner
+      # Explicitly set up Java (JDK 17) for the SonarScanner
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      # Step 2: Setup .NET SDK
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
+          
+      # Cache the SonarScanner tool to speed up future runs
+      - name: Cache SonarScanner
+        id: cache-sonar-scanner
+        uses: actions/cache@v4
+        with:
+          path: ./.sonar/scanner
+          key: ${{ runner.os }}-sonar-scanner
+          restore-keys: ${{ runner.os }}-sonar-scanner
 
-      # Step 3: Restores the dependencies for all projects in the solution
+      # Install SonarScanner only if it's not in the cache
+      - name: Install SonarScanner
+        if: steps.cache-sonar-scanner.outputs.cache-hit != 'true'
+        run: dotnet tool install dotnet-sonarscanner --tool-path ./.sonar/scanner
+
+      # --- ANALYSIS, BUILD, & TEST STEPS ---
+
+      # Step 3: Begin SonarCloud Analysis
+      - name: Begin SonarCloud Scan
+        run: ./.sonar/scanner/dotnet-sonarscanner begin /k:"YOUR_PROJECT_KEY" /o:"YOUR_ORGANIZATION_KEY" /d:sonar.login="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      # Step 4: Restore, Build, and Test
       - name: Restore dependencies
         run: dotnet restore LeagueManager.sln
-
-      # Step 4: Builds the entire solution in Release configuration
-      - name: Build solution
+      - name: Build and Analyze solution
         run: dotnet build LeagueManager.sln --configuration Release --no-restore
-
-      # Step 5: Runs all the tests in the solution
       - name: Run tests
         run: dotnet test LeagueManager.sln --configuration Release --no-build --verbosity normal
+        
+      # Step 5: End SonarCloud Analysis
+      - name: End SonarCloud Scan
+        run: ./.sonar/scanner/dotnet-sonarscanner end /d:sonar.login="${{ secrets.SONAR_TOKEN }}"
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-      # Step 6: Log in to the GitHub Container Registry
+      # --- DOCKER PUSH STEPS (Only run on the main branch, not on pull requests) ---
+
+      # Step 6: Log in to GitHub Container Registry
       - name: Log in to GitHub Container Registry
+        # This condition ensures this step only runs for pushes to the main branch
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Step 7: Build and push the Docker image
+      # Step 7: Build and push Docker image
       - name: Build and push Docker image
+        # This condition ensures this step only runs for pushes to the main branch
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: docker/build-push-action@v5
         with:
           context: .
