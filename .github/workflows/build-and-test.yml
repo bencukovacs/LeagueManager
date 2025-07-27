@@ -1,0 +1,41 @@
+# Name of the workflow, which will be displayed on the Actions tab in GitHub
+name: .NET Build and Test
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push events but only for the "main" branch
+  push:
+    branches: [ "main" ]
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This job is named "build-and-test"
+  build-and-test:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Step 1: Checks out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Step 2: Sets up the .NET 8 SDK on the runner
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      # Step 3: Restores the dependencies for all projects in the solution
+      - name: Restore dependencies
+        run: dotnet restore LeagueManager.sln
+
+      # Step 4: Builds the entire solution in Release configuration
+      - name: Build solution
+        run: dotnet build LeagueManager.sln --configuration Release --no-restore
+
+      # Step 5: Runs all the tests in the solution
+      - name: Run tests
+        run: dotnet test LeagueManager.sln --no-build --verbosity normal
