@@ -140,21 +140,18 @@ public class FixturesControllerTests
         Assert.IsType<NoContentResult>(result);
     }
 
-     [Fact]
+    [Fact]
     public async Task SubmitResult_WhenAuthorizationSucceeds_ReturnsOkResult()
     {
         // Arrange
-        var submitDto = new SubmitResultDto
-        {
-            HomeScore = 1,
-            AwayScore = 0,
-            MomVote = new MomVoteDto { VotedForOwnPlayerId = 1, VotedForOpponentPlayerId = 2 }
-        };
+        var submitDto = new SubmitResultDto();
         var fixtureDto = new FixtureResponseDto { Id = 1, HomeTeam = new TeamResponseDto { Id = 1, Name = "A", Status = "Approved" }, AwayTeam = new TeamResponseDto { Id = 2, Name = "B", Status = "Approved" }, Status = "Scheduled" };
-        var newResult = new Result { Id = 1, FixtureId = 1 };
+        
+        // FIX: The service now returns a ResultResponseDto
+        var responseDto = new ResultResponseDto { Id = 1, FixtureId = 1, HomeScore = 2, AwayScore = 1, Status = "PendingApproval" };
 
         _mockFixtureService.Setup(s => s.GetFixtureByIdAsync(1)).ReturnsAsync(fixtureDto);
-        _mockFixtureService.Setup(s => s.SubmitResultAsync(1, submitDto)).ReturnsAsync(newResult);
+        _mockFixtureService.Setup(s => s.SubmitResultAsync(1, submitDto)).ReturnsAsync(responseDto);
 
         _mockAuthorizationService
             .Setup(s => s.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), "CanSubmitResult"))
@@ -164,7 +161,9 @@ public class FixturesControllerTests
         var result = await _controller.SubmitResult(1, submitDto);
 
         // Assert
-        Assert.IsType<OkObjectResult>(result);
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var returnedResult = Assert.IsType<ResultResponseDto>(okResult.Value);
+        Assert.Equal(1, returnedResult.Id);
     }
 
     [Fact]

@@ -126,7 +126,7 @@ public class FixtureService : IFixtureService
         return true;
     }
 
-    public async Task<Result> SubmitResultAsync(int fixtureId, SubmitResultDto resultDto)
+    public async Task<ResultResponseDto> SubmitResultAsync(int fixtureId, SubmitResultDto resultDto)
     {
         var fixture = await _context.Fixtures.FindAsync(fixtureId)
             ?? throw new KeyNotFoundException("Fixture not found.");
@@ -224,6 +224,6 @@ public class FixtureService : IFixtureService
         await _context.SaveChangesAsync();
         await transaction.CommitAsync();
 
-        return result;
+        return _mapper.Map<ResultResponseDto>(result);
     }
 }
