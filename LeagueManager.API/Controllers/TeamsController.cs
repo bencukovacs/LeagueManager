@@ -97,4 +97,12 @@ public class TeamsController : ControllerBase
         }
         return NoContent();
     }
+
+    [HttpGet("pending")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> GetPendingTeams()
+    {
+        var pendingTeams = await _teamService.GetPendingTeamsAsync();
+        return Ok(pendingTeams);
+    }
 }

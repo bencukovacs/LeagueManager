@@ -1,4 +1,5 @@
 using AutoMapper;
+using AutoMapper.QueryableExtensions;
 using LeagueManager.Application.Dtos;
 using LeagueManager.Application.Services;
 using LeagueManager.Domain.Models;
@@ -47,7 +48,7 @@ public class TeamService : ITeamService
         team.Status = TeamStatus.PendingApproval;
 
         _context.Teams.Add(team);
-        
+
         // We must save here first to get the new team's ID
         await _context.SaveChangesAsync();
 
@@ -105,5 +106,13 @@ public class TeamService : ITeamService
         _context.Teams.Remove(team);
         await _context.SaveChangesAsync();
         return true;
+    }
+    
+    public async Task<IEnumerable<TeamResponseDto>> GetPendingTeamsAsync()
+    {
+        return await _context.Teams
+            .Where(t => t.Status == TeamStatus.PendingApproval)
+            .ProjectTo<TeamResponseDto>(_mapper.ConfigurationProvider)
+            .ToListAsync();
     }
 }

@@ -106,7 +106,7 @@ public class TeamsControllerTests
         var unauthorizedResult = Assert.IsType<UnauthorizedObjectResult>(result);
         Assert.Equal("User is not authenticated.", unauthorizedResult.Value);
     }
-    
+
     [Fact]
     public async Task ApproveTeam_WhenSuccessful_ReturnsOkResult()
     {
@@ -163,7 +163,7 @@ public class TeamsControllerTests
     {
         // Arrange
         var updateDto = new CreateTeamDto { Name = "Updated Name" };
-        
+
         // --- NEW: Setup the authorization mock to return a failure result ---
         _mockAuthorizationService
             .Setup(s => s.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), "CanManageTeam"))
@@ -182,7 +182,7 @@ public class TeamsControllerTests
         // Arrange
         var updateDto = new CreateTeamDto { Name = "Updated Name" };
         _mockTeamService.Setup(s => s.UpdateTeamAsync(99, updateDto)).ReturnsAsync((TeamResponseDto?)null);
-        
+
         // --- NEW: We still need to simulate successful authorization to get to the service call ---
         _mockAuthorizationService
             .Setup(s => s.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), "CanManageTeam"))
@@ -231,7 +231,28 @@ public class TeamsControllerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => _controller.DeleteTeam(1));
-        
+
         Assert.Equal(expectedExceptionMessage, exception.Message);
+    }
+    
+    [Fact]
+    public async Task GetPendingTeams_ReturnsOkResult_WithPendingTeams()
+    {
+        var pendingTeams = new List<TeamResponseDto>
+        {
+            new() { Id = 3, Name = "Pending Team 1", Status = "PendingApproval" },
+            new() { Id = 4, Name = "Pending Team 2", Status = "PendingApproval" }
+        };
+
+        _mockTeamService
+            .Setup(s => s.GetPendingTeamsAsync())
+            .ReturnsAsync(pendingTeams);
+
+        var result = await _controller.GetPendingTeams();
+
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var returnedTeams = Assert.IsAssignableFrom<IEnumerable<TeamResponseDto>>(okResult.Value);
+        Assert.Equal(2, returnedTeams.Count());
+        Assert.All(returnedTeams, team => Assert.Equal("PendingApproval", team.Status));
     }
 }

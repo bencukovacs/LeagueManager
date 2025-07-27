@@ -11,4 +11,5 @@ public interface ITeamService
     Task<TeamResponseDto?> UpdateTeamAsync(int id, CreateTeamDto teamDto);
     Task<bool> DeleteTeamAsync(int id);
     Task<TeamResponseDto?> ApproveTeamAsync(int teamId);
+    Task<IEnumerable<TeamResponseDto>> GetPendingTeamsAsync();
 }
