@@ -1,7 +1,10 @@
 using AutoMapper;
+using AutoMapper.QueryableExtensions;
 using LeagueManager.Application.Dtos;
 using LeagueManager.Application.Services;
+using LeagueManager.Domain.Models;
 using LeagueManager.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace LeagueManager.Infrastructure.Services;
 
@@ -29,5 +32,12 @@ public class ResultService : IResultService
         await _context.SaveChangesAsync();
 
         return _mapper.Map<ResultResponseDto>(result);
+    }
+    public async Task<IEnumerable<ResultResponseDto>> GetPendingResultsAsync()
+    {
+        return await _context.Results
+            .Where(r => r.Status == ResultStatus.PendingApproval)
+            .ProjectTo<ResultResponseDto>(_mapper.ConfigurationProvider)
+            .ToListAsync();
     }
 }

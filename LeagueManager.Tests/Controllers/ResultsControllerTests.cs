@@ -73,4 +73,25 @@ public class ResultsControllerTests
         // Verify that the service method was called exactly once with the correct parameters
         _mockResultService.Verify(s => s.UpdateResultStatusAsync(5, dto), Times.Once);
     }
+
+    [Fact]
+    public async Task GetPendingResults_ReturnsOkResult_WithPendingResults()
+    {
+        var pendingResults = new List<ResultResponseDto>
+        {
+            new() { Id = 1, Status = "PendingApproval", HomeScore = 2, AwayScore = 1, FixtureId = 1 },
+            new() { Id = 2, Status = "PendingApproval", HomeScore = 0, AwayScore = 0, FixtureId = 2 }
+        };
+
+        _mockResultService
+            .Setup(s => s.GetPendingResultsAsync())
+            .ReturnsAsync(pendingResults);
+
+        var result = await _controller.GetPendingResults();
+
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var returnedResults = Assert.IsAssignableFrom<IEnumerable<ResultResponseDto>>(okResult.Value);
+        Assert.Equal(2, returnedResults.Count());
+        Assert.All(returnedResults, res => Assert.Equal("PendingApproval", res.Status));
+    }
 }

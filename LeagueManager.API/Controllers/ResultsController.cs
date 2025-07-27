@@ -29,4 +29,12 @@ public class ResultsController : ControllerBase
 
         return NoContent();
     }
+
+    [HttpGet("pending")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> GetPendingResults()
+    {
+        var pendingResults = await _resultService.GetPendingResultsAsync();
+        return Ok(pendingResults);
+    }
 }
