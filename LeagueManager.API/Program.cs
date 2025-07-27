@@ -104,9 +104,9 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 
-builder.Services.AddSingleton<IAuthorizationHandler, CanManageTeamHandler>();
-builder.Services.AddSingleton<IAuthorizationHandler, CanUpdatePlayerHandler>();
-builder.Services.AddSingleton<IAuthorizationHandler, CanSubmitResultHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, CanManageTeamHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, CanUpdatePlayerHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, CanSubmitResultHandler>();
 
 var app = builder.Build();
 

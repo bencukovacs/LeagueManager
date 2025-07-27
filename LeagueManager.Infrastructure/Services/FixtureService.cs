@@ -5,6 +5,9 @@ using LeagueManager.Application.Services;
 using LeagueManager.Domain.Models;
 using LeagueManager.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Http;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 
 namespace LeagueManager.Infrastructure.Services;
 
@@ -12,11 +15,13 @@ public class FixtureService : IFixtureService
 {
     private readonly LeagueDbContext _context;
     private readonly IMapper _mapper;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public FixtureService(LeagueDbContext context, IMapper mapper)
+    public FixtureService(LeagueDbContext context, IMapper mapper, IHttpContextAccessor httpContextAccessor)
     {
         _context = context;
         _mapper = mapper;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public async Task<IEnumerable<FixtureResponseDto>> GetAllFixturesAsync()
@@ -114,6 +119,10 @@ public class FixtureService : IFixtureService
         var fixture = await _context.Fixtures.FindAsync(fixtureId)
             ?? throw new KeyNotFoundException("Fixture not found.");
 
+        var currentUserId = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? throw new UnauthorizedAccessException("User is not authenticated.");
+
+
         if (await _context.Results.AnyAsync(r => r.FixtureId == fixtureId))
         {
             throw new InvalidOperationException("A result for this fixture has already been submitted.");
@@ -134,6 +143,32 @@ public class FixtureService : IFixtureService
             if (validPlayersCount != playerIds.Count)
             {
                 throw new InvalidOperationException("One or more goalscorer IDs are invalid or do not belong to the competing teams.");
+            }
+        }
+
+         if (resultDto.MomVote != null)
+        {
+            // Find which team the current user is a manager of for this fixture
+            var userMembership = await _context.TeamMemberships.FirstOrDefaultAsync(m =>
+                (m.TeamId == fixture.HomeTeamId || m.TeamId == fixture.AwayTeamId) &&
+                m.UserId == currentUserId &&
+                (m.Role == TeamRole.Leader || m.Role == TeamRole.AssistantLeader));
+
+            if (userMembership == null)
+            {
+                throw new UnauthorizedAccessException("User is not a manager of either team in this fixture.");
+            }
+
+            var votingTeamId = userMembership.TeamId;
+            var opposingTeamId = votingTeamId == fixture.HomeTeamId ? fixture.AwayTeamId : fixture.HomeTeamId;
+
+            // Validate that the voted-for players belong to the correct teams
+            var ownPlayerIsValid = await _context.Players.AnyAsync(p => p.Id == resultDto.MomVote.VotedForOwnPlayerId && p.TeamId == votingTeamId);
+            var opponentPlayerIsValid = await _context.Players.AnyAsync(p => p.Id == resultDto.MomVote.VotedForOpponentPlayerId && p.TeamId == opposingTeamId);
+
+            if (!ownPlayerIsValid || !opponentPlayerIsValid)
+            {
+                throw new ArgumentException("Invalid player ID in MOM vote. Ensure players belong to the correct teams.");
             }
         }
 
@@ -159,6 +194,19 @@ public class FixtureService : IFixtureService
                 FixtureId = fixtureId
             };
             _context.Goals.Add(goal);
+        }
+
+        if (resultDto.MomVote != null)
+        {
+            var votingTeamId = _context.TeamMemberships.First(m => m.UserId == currentUserId).TeamId;
+            var momVote = new MOMVote
+            {
+                FixtureId = fixtureId,
+                VotingTeamId = votingTeamId,
+                VotedForOwnPlayerId = resultDto.MomVote.VotedForOwnPlayerId,
+                VotedForOpponentPlayerId = resultDto.MomVote.VotedForOpponentPlayerId
+            };
+            _context.MOMVotes.Add(momVote);
         }
 
         await _context.SaveChangesAsync();

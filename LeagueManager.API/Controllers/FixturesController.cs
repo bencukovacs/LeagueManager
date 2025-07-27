@@ -74,6 +74,14 @@ public class FixturesController : ControllerBase
             var result = await _fixtureService.SubmitResultAsync(fixtureId, resultDto);
             return Ok(result);
         }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ex.Message);
+        }
         catch (InvalidOperationException ex)
         {
             return BadRequest(ex.Message);

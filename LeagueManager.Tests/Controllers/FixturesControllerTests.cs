@@ -102,16 +102,41 @@ public class FixturesControllerTests
         Assert.IsType<NoContentResult>(result);
     }
 
-    [Fact]
+     [Fact]
     public async Task SubmitResult_WhenAuthorizationSucceeds_ReturnsOkResult()
     {
         // Arrange
-        var submitDto = new SubmitResultDto();
+        // --- ARRANGE ---
+// 1. Create the teams and fixture
+var teamA = new Team { Id = 1, Name = "Team A" };
+var teamB = new Team { Id = 2, Name = "Team B" };
+var fixture = new Fixture { Id = 1, HomeTeamId = 1, AwayTeamId = 2 };
+
+// 2. Create players for EACH team
+var playerFromTeamA = new Player { Id = 10, Name = "Player A", TeamId = 1 };
+var playerFromTeamB = new Player { Id = 20, Name = "Player B", TeamId = 2 };
+
+// 3. Create a user who is the leader of Team A
+var user = new User { Id = "user-123" };
+var membership = new TeamMembership { UserId = "user-123", TeamId = 1, Role = TeamRole.Leader };
+
+// 4. Create the DTO with the CORRECT player IDs
+var submitDto = new SubmitResultDto
+{
+    HomeScore = 1,
+    AwayScore = 0,
+    MomVote = new MomVoteDto 
+    {
+        VotedForOwnPlayerId = 10,     // Player from Team A (submitter's team)
+        VotedForOpponentPlayerId = 20 // Player from Team B (opponent's team)
+    }
+};
         var fixtureDto = new FixtureResponseDto { Id = 1, HomeTeam = new TeamResponseDto { Id = 1, Name = "A", Status = "Approved" }, AwayTeam = new TeamResponseDto { Id = 2, Name = "B", Status = "Approved" }, Status = "Scheduled" };
         var newResult = new Result { Id = 1, FixtureId = 1 };
 
         _mockFixtureService.Setup(s => s.GetFixtureByIdAsync(1)).ReturnsAsync(fixtureDto);
         _mockFixtureService.Setup(s => s.SubmitResultAsync(1, submitDto)).ReturnsAsync(newResult);
+
         _mockAuthorizationService
             .Setup(s => s.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), "CanSubmitResult"))
             .ReturnsAsync(AuthorizationResult.Success());
@@ -121,6 +146,29 @@ public class FixturesControllerTests
 
         // Assert
         Assert.IsType<OkObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task SubmitResult_WhenServiceThrowsArgumentException_ReturnsBadRequest()
+    {
+        // Arrange
+        var submitDto = new SubmitResultDto { MomVote = new MomVoteDto { VotedForOwnPlayerId = 99, VotedForOpponentPlayerId = 98 }}; // Invalid player IDs
+        var fixtureDto = new FixtureResponseDto { Id = 1, HomeTeam = new TeamResponseDto { Id = 1, Name = "A", Status = "Approved" }, AwayTeam = new TeamResponseDto { Id = 2, Name = "B", Status = "Approved" }, Status = "Scheduled" };
+
+        _mockFixtureService.Setup(s => s.GetFixtureByIdAsync(1)).ReturnsAsync(fixtureDto);
+        _mockFixtureService.Setup(s => s.SubmitResultAsync(1, submitDto))
+            .ThrowsAsync(new ArgumentException("Invalid player ID in MOM vote."));
+        
+        _mockAuthorizationService
+            .Setup(s => s.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), "CanSubmitResult"))
+            .ReturnsAsync(AuthorizationResult.Success());
+
+        // Act
+        var result = await _controller.SubmitResult(1, submitDto);
+
+        // Assert
+        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal("Invalid player ID in MOM vote.", badRequestResult.Value);
     }
 
     [Fact]

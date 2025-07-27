@@ -14,6 +14,8 @@ public class SubmitResultDto
     public int AwayScore { get; set; }
 
     public List<GoalscorerDto> Goalscorers { get; set; } = new();
+    
+    public MomVoteDto? MomVote { get; set; }
 }
 
 public class GoalscorerDto
@@ -35,4 +37,13 @@ public class ResultResponseDto
     public int HomeScore { get; set; }
     public int AwayScore { get; set; }
     public required string Status { get; set; }
+}
+
+public class MomVoteDto
+{
+    [Required]
+    public int VotedForOwnPlayerId { get; set; }
+
+    [Required]
+    public int VotedForOpponentPlayerId { get; set; }
 }

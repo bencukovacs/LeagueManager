@@ -15,6 +15,7 @@ public class LeagueDbContext : IdentityDbContext<User>
     public DbSet<Result> Results { get; set; }
     public DbSet<Goal> Goals { get; set; }
     public DbSet<TeamMembership> TeamMemberships { get; set; }
+    public DbSet<MOMVote> MOMVotes { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -30,6 +31,24 @@ public class LeagueDbContext : IdentityDbContext<User>
             .HasOne(f => f.AwayTeam)
             .WithMany()
             .HasForeignKey(f => f.AwayTeamId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<MOMVote>()
+            .HasOne(v => v.VotingTeam)
+            .WithMany()
+            .HasForeignKey(v => v.VotingTeamId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<MOMVote>()
+            .HasOne(v => v.VotedForOwnPlayer)
+            .WithMany()
+            .HasForeignKey(v => v.VotedForOwnPlayerId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<MOMVote>()
+            .HasOne(v => v.VotedForOpponentPlayer)
+            .WithMany()
+            .HasForeignKey(v => v.VotedForOpponentPlayerId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }
