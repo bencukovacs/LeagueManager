@@ -26,6 +26,13 @@ public class TeamsController : ControllerBase
         return Ok(await _teamService.GetAllTeamsAsync());
     }
 
+    [HttpGet("all")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> GetAllTeamsForAdmin()
+    {
+        return Ok(await _teamService.GetAllTeamsForAdminAsync());
+    }
+
     [HttpGet("{id}")]
     [AllowAnonymous]
     public async Task<IActionResult> GetTeam(int id)

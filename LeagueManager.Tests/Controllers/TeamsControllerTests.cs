@@ -43,6 +43,26 @@ public class TeamsControllerTests
     }
 
     [Fact]
+    public async Task GetAllTeamsForAdmin_ReturnsOkResult_WithAllTeams()
+    {
+        var allTeams = new List<TeamResponseDto>
+        {
+            new() { Id = 1, Name = "Approved Team", Status = "Approved" },
+            new() { Id = 2, Name = "Pending Team", Status = "PendingApproval" }
+        };
+
+        _mockTeamService
+            .Setup(s => s.GetAllTeamsForAdminAsync())
+            .ReturnsAsync(allTeams);
+
+        var result = await _controller.GetAllTeamsForAdmin();
+
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var returnedTeams = Assert.IsAssignableFrom<IEnumerable<TeamResponseDto>>(okResult.Value);
+        Assert.Equal(2, returnedTeams.Count());
+    }
+
+    [Fact]
     public async Task GetTeam_WhenTeamExists_ReturnsOkResult()
     {
         // Arrange

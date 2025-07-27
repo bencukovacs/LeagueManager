@@ -25,8 +25,17 @@ public class TeamService : ITeamService
 
     public async Task<IEnumerable<TeamResponseDto>> GetAllTeamsAsync()
     {
-        var teams = await _context.Teams.ToListAsync();
-        return _mapper.Map<IEnumerable<TeamResponseDto>>(teams);
+        return await _context.Teams
+            .Where(t => t.Status == TeamStatus.Approved)
+            .ProjectTo<TeamResponseDto>(_mapper.ConfigurationProvider)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<TeamResponseDto>> GetAllTeamsForAdminAsync()
+    {
+        return await _context.Teams
+            .ProjectTo<TeamResponseDto>(_mapper.ConfigurationProvider)
+            .ToListAsync();
     }
 
     public async Task<TeamResponseDto?> GetTeamByIdAsync(int id)
