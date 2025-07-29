@@ -24,8 +24,8 @@ This is the backend API for a web application designed to manage an amateur or c
     ```
 
 3. **Configure Local Secrets:**
-    * **Database:** In the project's root directory, create a copy of the `.env.example` file and name it `.env`. Open this new `.env` file and set your desired local database password.
-    * **Application:** In the `LeagueManager.API` directory, create a copy of the `appsettings.Example.json` file and name it `appsettings.Development.json`. Open this new file and fill in the placeholder values for the JWT key and the admin password.
+    * In the project's root directory, create a copy of the `.env.example` file and name it `.env`.
+    * Open this new `.env` file and fill in your desired local secrets for the database password, JWT key, and admin password.
 4. **Run Application:**
     * Navigate to the project's root directory in your terminal.
     * Run the following command. This will build the API image and start both the API and database containers.

@@ -19,13 +19,20 @@ public class AuthService : IAuthService
     public AuthService(UserManager<User> userManager, IOptions<JwtSettings> jwtSettings)
     {
         _userManager = userManager;
-        _jwtSettings = jwtSettings.Value; 
+        _jwtSettings = jwtSettings.Value;
     }
 
     public async Task<IdentityResult> RegisterUserAsync(RegisterDto registerDto)
     {
         var user = new User { UserName = registerDto.Email, Email = registerDto.Email };
         var result = await _userManager.CreateAsync(user, registerDto.Password);
+        
+        // By default, a new user gets the "RegisteredUser" role
+        if (result.Succeeded)
+        {
+            await _userManager.AddToRoleAsync(user, "RegisteredUser");
+        }
+        
         return result;
     }
 
@@ -35,22 +42,28 @@ public class AuthService : IAuthService
 
         if (user != null && await _userManager.CheckPasswordAsync(user, loginDto.Password))
         {
-            return GenerateJwtToken(user);
+            // Pass the user object to the token generator
+            return await GenerateJwtToken(user);
         }
 
         return null;
     }
 
-    private string GenerateJwtToken(User user)
+    private async Task<string> GenerateJwtToken(User user)
     {
         var claims = new List<Claim>
         {
-            new Claim(JwtRegisteredClaimNames.Sub, user.Id)
+            new Claim(JwtRegisteredClaimNames.Sub, user.Id),
+            new Claim(JwtRegisteredClaimNames.Email, user.Email!)
         };
+
+        // Get the user's roles from the database
+        var roles = await _userManager.GetRolesAsync(user);
         
-        if (user.Email != null)
+        // Add each role as a separate "role" claim to the token
+        foreach (var role in roles)
         {
-            claims.Add(new Claim(JwtRegisteredClaimNames.Email, user.Email));
+            claims.Add(new Claim(ClaimTypes.Role, role));
         }
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Key));
