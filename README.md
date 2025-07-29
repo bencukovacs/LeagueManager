@@ -38,6 +38,12 @@ This is the backend API for a web application designed to manage an amateur or c
 
 ---
 
+## Contributing
+
+We welcome contributions! Please read our [**Contributing Guide**](docs/CONTRIBUTING.md) to learn about our development process, coding standards, and how to submit a pull request.
+
+---
+
 ## Tech Stack
 
 * **Backend:** .NET 8, ASP.NET Core Web API
