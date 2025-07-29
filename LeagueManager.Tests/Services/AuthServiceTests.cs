@@ -9,6 +9,8 @@ using LeagueManager.Application.Dtos;
 using LeagueManager.Application.Settings;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 
 namespace LeagueManager.Tests.Services;
 
@@ -73,23 +75,32 @@ public class AuthServiceTests
     }
 
     [Fact]
-    public async Task LoginUserAsync_WithValidCredentials_ReturnsJwtToken()
+    public async Task LoginUserAsync_WithValidCredentials_ReturnsJwtTokenWithRoles()
     {
         // Arrange
         var loginDto = new LoginDto { Email = "test@example.com", Password = "Password123!" };
         var user = new User { Id = "1", Email = "test@example.com", UserName = "test@example.com" };
+        var roles = new List<string> { "Admin", "RegisteredUser" };
 
-        // Setup the mock UserManager to find a user and then successfully check the password
         _mockUserManager.Setup(um => um.FindByEmailAsync(loginDto.Email)).ReturnsAsync(user);
         _mockUserManager.Setup(um => um.CheckPasswordAsync(user, loginDto.Password)).ReturnsAsync(true);
+        
+        // We must mock the GetRolesAsync method to return a list of roles.
+        _mockUserManager.Setup(um => um.GetRolesAsync(user)).ReturnsAsync(roles);
 
         // Act
-        var token = await _authService.LoginUserAsync(loginDto);
+        var tokenString = await _authService.LoginUserAsync(loginDto);
 
         // Assert
-        Assert.NotNull(token);
-        Assert.IsType<string>(token);
-        Assert.NotEmpty(token);
+        Assert.NotNull(tokenString);
+        var handler = new JwtSecurityTokenHandler();
+        var token = handler.ReadJwtToken(tokenString);
+
+        // Check that the token contains the correct role claims
+        var roleClaims = token.Claims.Where(c => c.Type == ClaimTypes.Role).ToList();
+        Assert.Equal(2, roleClaims.Count);
+        Assert.Contains(roleClaims, c => c.Value == "Admin");
+        Assert.Contains(roleClaims, c => c.Value == "RegisteredUser");
     }
 
     [Fact]
