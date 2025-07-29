@@ -1,24 +1,23 @@
-# Use the full .NET SDK image, which includes the 'dotnet ef' tools
-FROM mcr.microsoft.com/dotnet/sdk:8.0
-
-# Install the dotnet-ef global tool
-RUN dotnet tool install --global dotnet-ef
-# Add the tool to the PATH so the shell can find it
-ENV PATH="$PATH:/root/.dotnet/tools"
-
+# Stage 1: Build Environment
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# Copy all source code into the image
-COPY . .
-
-# Restore all dependencies for the solution
+# Copy project files and restore dependencies for caching
+COPY ["*.sln", "./"]
+COPY ["LeagueManager.API/*.csproj", "./LeagueManager.API/"]
+COPY ["LeagueManager.Application/*.csproj", "./LeagueManager.Application/"]
+COPY ["LeagueManager.Domain/*.csproj", "./LeagueManager.Domain/"]
+COPY ["LeagueManager.Infrastructure/*.csproj", "./LeagueManager.Infrastructure/"]
+COPY ["LeagueManager.Tests/*.csproj", "./LeagueManager.Tests/"]
 RUN dotnet restore "LeagueManager.sln"
 
-# Install the postgresql-client needed for the startup script
-RUN apt-get update && apt-get install -y --no-install-recommends postgresql-client
+# Copy the rest of the source code and publish the API
+COPY . .
+WORKDIR "/src/LeagueManager.API"
+RUN dotnet publish "LeagueManager.API.csproj" -c Release -o /app/publish
 
-# Make our entrypoint script executable
-RUN chmod +x ./LeagueManager.API/entrypoint.sh
-
-# Set the entrypoint to our script. This will be the first thing that runs.
-ENTRYPOINT ["/src/LeagueManager.API/entrypoint.sh"]
+# Stage 2: Final Production Image
+FROM mcr.microsoft.com/dotnet/aspnet:8.0
+WORKDIR /app
+COPY --from=build /app/publish .
+ENTRYPOINT ["dotnet", "LeagueManager.API.dll"]

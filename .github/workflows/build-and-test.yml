@@ -1,7 +1,7 @@
 # Name of the workflow
 name: .NET CI/CD
 
-# NEW: Trigger on pushes to main AND on pull requests to main
+# Trigger on pushes to main AND on pull requests to main
 on:
   push:
     branches: [ "main" ]

@@ -17,6 +17,8 @@ using FluentValidation.AspNetCore;
 using FluentValidation;
 using LeagueManager.Application.Validators;
 using Serilog;
+using Polly;
+using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseSerilog((context, configuration) => 
@@ -133,17 +135,39 @@ app.UseAuthorization();
 app.UseSerilogRequestLogging();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
+// Run the Seeder and Migrations with a Retry Policy
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
+    var logger = services.GetRequiredService<ILogger<Program>>();
     try
     {
-        await DbSeeder.SeedRolesAndAdminAsync(services);
+        // Define a retry policy: try 5 times, waiting 5 seconds between each attempt.
+        var retryPolicy = Policy
+            .Handle<NpgsqlException>() // Only retry on a Postgres connection error
+            .WaitAndRetryAsync(5, retryAttempt => 
+            {
+                var timeToWait = TimeSpan.FromSeconds(Math.Pow(2, retryAttempt));
+                logger.LogWarning("Database connection failed. Waiting {timeToWait} before next retry. Attempt {retryAttempt}", timeToWait, retryAttempt);
+                return timeToWait;
+            });
+
+        // Execute the migration and seeding within the retry policy
+        await retryPolicy.ExecuteAsync(async () =>
+        {
+            logger.LogInformation("Applying database migrations...");
+            var dbContext = services.GetRequiredService<LeagueDbContext>();
+            await dbContext.Database.MigrateAsync();
+            logger.LogInformation("Database migrations applied successfully.");
+
+            logger.LogInformation("Seeding database...");
+            await DbSeeder.SeedRolesAndAdminAsync(services);
+            logger.LogInformation("Database seeding completed.");
+        });
     }
     catch (Exception ex)
     {
-        var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "An error occurred during database seeding.");
+        logger.LogError(ex, "An error occurred during database migration or seeding after multiple retries.");
     }
 }
 
