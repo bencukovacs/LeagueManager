@@ -7,7 +7,8 @@ app = 'leaguemanager'
 primary_region = 'fra'
 
 [build]
-  dockerfile = "backend/Dockerfile"
+  context = "./backend"
+  dockerfile = "Dockerfile"
 
 [http_service]
   internal_port = 8080
