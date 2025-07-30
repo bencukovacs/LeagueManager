@@ -93,12 +93,12 @@ jobs:
 
       # Step 7: Build and push Docker image
       - name: Build and push Docker image
-        # This condition ensures this step only runs for pushes to the main branch
+      # This condition ensures this step only runs for pushes to the main branch
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: docker/build-push-action@v5
         with:
-          context: ./backend
-          file: ./backend/Dockerfile
+          context: . # Use the repository root as the context
+          file: backend/Dockerfile # Specify the full path to the Dockerfile
           push: true
           tags: |
             ghcr.io/${{ github.repository_owner }}/leaguemanager:latest
