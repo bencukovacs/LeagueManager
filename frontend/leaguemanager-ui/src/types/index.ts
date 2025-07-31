@@ -9,3 +9,11 @@ export interface TeamStats {
   goalDifference: number;
   points: number;
 }
+
+export interface Team {
+  id: number;
+  name: string;
+  primaryColor: string | null;
+  secondaryColor: string | null;
+  status: string;
+}

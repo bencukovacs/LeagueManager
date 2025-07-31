@@ -10,6 +10,8 @@ import HomePage from './pages/HomePage'
 import StandingsPage from './pages/StandingsPage'
 import RegisterPage from './pages/RegisterPage'
 import LoginPage from './pages/LoginPage'
+import CreateTeamPage from './pages/CreateTeamPage'
+import TeamDetailsPage from './pages/TeamDetailsPage'
 
 const queryClient = new QueryClient()
 
@@ -22,6 +24,8 @@ const router = createBrowserRouter([
       { path: "standings", element: <StandingsPage /> },
       { path: "register", element: <RegisterPage /> },
       { path: "login", element: <LoginPage /> },
+      { path: "create-team", element: <CreateTeamPage /> },
+      { path: "teams/:teamId", element: <TeamDetailsPage /> },
     ],
   },
 ]);
