@@ -97,7 +97,7 @@ public class AuthServiceTests
         var token = handler.ReadJwtToken(tokenString);
 
         // Check that the token contains the correct role claims
-        var roleClaims = token.Claims.Where(c => c.Type == ClaimTypes.Role).ToList();
+        var roleClaims = token.Claims.Where(c => c.Type == "role").ToList();
         Assert.Equal(2, roleClaims.Count);
         Assert.Contains(roleClaims, c => c.Value == "Admin");
         Assert.Contains(roleClaims, c => c.Value == "RegisteredUser");
