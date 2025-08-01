@@ -12,6 +12,8 @@ import RegisterPage from './pages/RegisterPage'
 import LoginPage from './pages/LoginPage'
 import CreateTeamPage from './pages/CreateTeamPage'
 import TeamDetailsPage from './pages/TeamDetailsPage'
+import AdminDashboardPage from './pages/AdminDashboardPage'
+import ProtectedRoute from './components/ProtectedRoute'
 
 const queryClient = new QueryClient()
 
@@ -24,8 +26,25 @@ const router = createBrowserRouter([
       { path: "standings", element: <StandingsPage /> },
       { path: "register", element: <RegisterPage /> },
       { path: "login", element: <LoginPage /> },
-      { path: "create-team", element: <CreateTeamPage /> },
       { path: "teams/:teamId", element: <TeamDetailsPage /> },
+
+      // --- ROUTES FOR ANY LOGGED-IN USER ---
+      {
+        element: <ProtectedRoute />, // No roles needed, just authentication
+        children: [
+          { path: "create-team", element: <CreateTeamPage /> },
+          // Add other general user routes here later
+        ],
+      },
+
+      // --- ROUTES FOR ADMINS ONLY ---
+      {
+        element: <ProtectedRoute allowedRoles={['Admin']} />, // Requires "Admin" role
+        children: [
+          { path: "admin", element: <AdminDashboardPage /> },
+          // Add other admin-only routes here later
+        ],
+      },
     ],
   },
 ]);

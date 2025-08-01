@@ -63,7 +63,7 @@ public class AuthService : IAuthService
         // Add each role as a separate "role" claim to the token
         foreach (var role in roles)
         {
-            claims.Add(new Claim(ClaimTypes.Role, role));
+            claims.Add(new Claim("role", role));
         }
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Key));
