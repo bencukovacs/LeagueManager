@@ -17,3 +17,11 @@ export interface Team {
   secondaryColor: string | null;
   status: string;
 }
+
+export interface Result {
+  id: number;
+  fixtureId: number;
+  homeScore: number;
+  awayScore: number;
+  status: string;
+}

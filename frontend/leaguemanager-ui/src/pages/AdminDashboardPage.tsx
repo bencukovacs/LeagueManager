@@ -1,4 +1,5 @@
 import PendingTeamsList from '../features/admin/PendingTeamsList';
+import PendingResultsList from '../features/admin/PendingResultsList';
 
 export default function AdminDashboardPage() {
   return (
@@ -6,7 +7,7 @@ export default function AdminDashboardPage() {
       <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
       <div className="space-y-8">
         <PendingTeamsList />
-        {/* We will add the Pending Results list here later */}
+        <PendingResultsList />
       </div>
     </div>
   );
