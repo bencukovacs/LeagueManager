@@ -135,6 +135,7 @@ builder.Services.AddScoped<IPlayerService, PlayerService>();
 builder.Services.AddScoped<ILocationService, LocationService>();
 builder.Services.AddScoped<IResultService, ResultService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<ILeagueConfigurationService, LeagueConfigurationService>();
 
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 
