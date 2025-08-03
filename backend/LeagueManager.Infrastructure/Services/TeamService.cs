@@ -137,4 +137,22 @@ public class TeamService : ITeamService
             .ProjectTo<TeamResponseDto>(_mapper.ConfigurationProvider)
             .ToListAsync();
     }
+    
+    public async Task<TeamResponseDto?> GetMyTeamAsync()
+    {
+        var currentUserId = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(currentUserId))
+        {
+            return null; // No user logged in
+        }
+
+        // Find the first team where the current user is a Leader or AssistantLeader
+        var team = await _context.TeamMemberships
+            .Where(m => m.UserId == currentUserId && (m.Role == TeamRole.Leader || m.Role == TeamRole.AssistantLeader))
+            .Select(m => m.Team)
+            .ProjectTo<TeamResponseDto>(_mapper.ConfigurationProvider)
+            .FirstOrDefaultAsync();
+
+        return team;
+    }
 }
