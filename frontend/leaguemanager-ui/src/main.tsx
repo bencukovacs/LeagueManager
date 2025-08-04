@@ -14,6 +14,7 @@ import CreateTeamPage from './pages/CreateTeamPage'
 import TeamDetailsPage from './pages/TeamDetailsPage'
 import AdminDashboardPage from './pages/AdminDashboardPage'
 import ProtectedRoute from './components/ProtectedRoute'
+import MyTeamPage from './pages/MyTeamPage'
 
 const queryClient = new QueryClient()
 
@@ -33,6 +34,7 @@ const router = createBrowserRouter([
         element: <ProtectedRoute />, // No roles needed, just authentication
         children: [
           { path: "create-team", element: <CreateTeamPage /> },
+          { path: "my-team", element: <MyTeamPage /> },
           // Add other general user routes here later
         ],
       },

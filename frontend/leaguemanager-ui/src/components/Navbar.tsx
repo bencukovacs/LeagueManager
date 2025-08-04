@@ -20,6 +20,7 @@ export default function Navbar() {
               {user?.roles.includes('Admin') && (
                 <Link to="/admin" className="hover:text-gray-300">Admin</Link>
               )}
+              <Link to="/my-team" className="hover:text-gray-300">My Team</Link>
               <Link to="/create-team" className="hover:text-gray-300">Create Team</Link>
               <button onClick={logout} className="hover:text-gray-300">
                 Logout
