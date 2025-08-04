@@ -12,6 +12,7 @@ namespace LeagueManager.Tests.Controllers;
 public class TeamsControllerTests
 {
     private readonly Mock<ITeamService> _mockTeamService;
+    private readonly Mock<IPlayerService> _mockPlayerService;
     private readonly Mock<IAuthorizationService> _mockAuthorizationService;
     private readonly TeamsController _controller;
 
@@ -19,7 +20,8 @@ public class TeamsControllerTests
     {
         _mockAuthorizationService = new Mock<IAuthorizationService>();
         _mockTeamService = new Mock<ITeamService>();
-        _controller = new TeamsController(_mockTeamService.Object, _mockAuthorizationService.Object);
+        _mockPlayerService = new Mock<IPlayerService>();
+        _controller = new TeamsController(_mockTeamService.Object, _mockPlayerService.Object, _mockAuthorizationService.Object);
         _controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity()) }
