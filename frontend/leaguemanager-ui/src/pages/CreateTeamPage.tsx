@@ -14,15 +14,22 @@ export default function CreateTeamPage() {
     setError(null);
 
     try {
-      // Our apiClient automatically sends the JWT from the AuthContext
       const response = await apiClient.post('/teams', { name, primaryColor, secondaryColor });
-      
-      // After successful creation, redirect to the new team's page (or home for now)
-      // We use the ID from the response to build the URL
       navigate(`/teams/${response.data.id}`); 
     } catch (err: any) {
+      // We now intelligently extract the error message string
       if (err.response && err.response.data) {
-        setError(err.response.data);
+        // Handle the object from our middleware ({ Message: "..." })
+        if (typeof err.response.data === 'object' && err.response.data.Message) {
+          setError(err.response.data.Message);
+        } 
+        // Handle simple string errors from our controller's BadRequest("...")
+        else if (typeof err.response.data === 'string') {
+          setError(err.response.data);
+        }
+        else {
+          setError('An unknown error occurred.');
+        }
       } else {
         setError('An unexpected error occurred. Please try again.');
       }

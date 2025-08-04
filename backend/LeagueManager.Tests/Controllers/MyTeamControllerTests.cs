@@ -22,22 +22,24 @@ public class MyTeamControllerTests
     {
         // Arrange
         var teamDto = new TeamResponseDto { Id = 1, Name = "My Team", Status = "Approved" };
-        _mockTeamService.Setup(s => s.GetMyTeamAsync()).ReturnsAsync(teamDto);
+        var myTeamResponseDto = new MyTeamResponseDto { Team = teamDto, UserRole = "Leader" };
+        _mockTeamService.Setup(s => s.GetMyTeamAsync()).ReturnsAsync(myTeamResponseDto);
 
         // Act
         var result = await _controller.GetMyTeam();
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
-        var returnedTeam = Assert.IsType<TeamResponseDto>(okResult.Value);
-        Assert.Equal(1, returnedTeam.Id);
+        var returnedData = Assert.IsType<MyTeamResponseDto>(okResult.Value);
+        Assert.Equal(1, returnedData.Team.Id);
+        Assert.Equal("Leader", returnedData.UserRole);
     }
 
     [Fact]
     public async Task GetMyTeam_WhenServiceReturnsNull_ReturnsNotFound()
     {
         // Arrange
-        _mockTeamService.Setup(s => s.GetMyTeamAsync()).ReturnsAsync((TeamResponseDto?)null);
+        _mockTeamService.Setup(s => s.GetMyTeamAsync()).ReturnsAsync((MyTeamResponseDto?)null);
 
         // Act
         var result = await _controller.GetMyTeam();

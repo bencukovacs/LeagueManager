@@ -137,8 +137,8 @@ public class TeamService : ITeamService
             .ProjectTo<TeamResponseDto>(_mapper.ConfigurationProvider)
             .ToListAsync();
     }
-    
-    public async Task<TeamResponseDto?> GetMyTeamAsync()
+
+    public async Task<MyTeamResponseDto?> GetMyTeamAsync()
     {
         var currentUserId = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(currentUserId))
@@ -146,13 +146,23 @@ public class TeamService : ITeamService
             return null; // No user logged in
         }
 
-        // Find the first team where the current user is a Leader or AssistantLeader
-        var team = await _context.TeamMemberships
-            .Where(m => m.UserId == currentUserId && (m.Role == TeamRole.Leader || m.Role == TeamRole.AssistantLeader))
-            .Select(m => m.Team)
-            .ProjectTo<TeamResponseDto>(_mapper.ConfigurationProvider)
-            .FirstOrDefaultAsync();
+        // Find the user's first membership record
+        var membership = await _context.TeamMemberships
+            .Include(m => m.Team) // We need the full team object
+            .FirstOrDefaultAsync(m => m.UserId == currentUserId);
 
-        return team;
+        if (membership == null || membership.Team == null)
+        {
+            return null; // User is not on any team
+        }
+
+        // Construct the new, richer response object
+        var response = new MyTeamResponseDto
+        {
+            Team = _mapper.Map<TeamResponseDto>(membership.Team),
+            UserRole = membership.Role.ToString()
+        };
+
+        return response;
     }
 }

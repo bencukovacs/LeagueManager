@@ -11,11 +11,13 @@ namespace LeagueManager.API.Controllers;
 public class TeamsController : ControllerBase
 {
     private readonly ITeamService _teamService;
+    private readonly IPlayerService _playerService;
     private readonly IAuthorizationService _authorizationService;
 
-    public TeamsController(ITeamService teamService, IAuthorizationService authorizationService)
+    public TeamsController(ITeamService teamService, IPlayerService playerService, IAuthorizationService authorizationService)
     {
         _teamService = teamService;
+        _playerService = playerService;
         _authorizationService = authorizationService;
     }
 
@@ -118,5 +120,13 @@ public class TeamsController : ControllerBase
     {
         var pendingTeams = await _teamService.GetPendingTeamsAsync();
         return Ok(pendingTeams);
+    }
+
+    [HttpGet("{teamId}/players")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetTeamRoster(int teamId)
+    {
+        var players = await _playerService.GetPlayersForTeamAsync(teamId);
+        return Ok(players);
     }
 }

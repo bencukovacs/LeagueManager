@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using AutoMapper;
+using AutoMapper.QueryableExtensions;
 using LeagueManager.Application.Dtos;
 using LeagueManager.Application.Services;
 using LeagueManager.Domain.Models;
@@ -75,8 +76,8 @@ public class PlayerService : IPlayerService
         {
             throw new UnauthorizedAccessException("User is not authorized to create a player for this team or already has a player profile.");
         }
-        
-        var team = await _context.Teams.FindAsync(playerDto.TeamId) 
+
+        var team = await _context.Teams.FindAsync(playerDto.TeamId)
             ?? throw new ArgumentException("Invalid Team ID.");
 
         var player = _mapper.Map<Player>(playerDto);
@@ -98,7 +99,7 @@ public class PlayerService : IPlayerService
     {
         var player = await _context.Players.FindAsync(id)
             ?? throw new KeyNotFoundException("Player not found.");
-            
+
         var currentUserId = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier);
         var currentUserIsAdmin = _httpContextAccessor.HttpContext?.User.IsInRole("Admin") ?? false;
 
@@ -124,7 +125,7 @@ public class PlayerService : IPlayerService
         // If neither of the above conditions are met, the user is not authorized.
         throw new UnauthorizedAccessException("User is not authorized to delete this player.");
     }
-    
+
     public async Task<Player?> GetDomainPlayerByIdAsync(int id)
     {
         // This method fetches the full domain object with all relationships
@@ -133,5 +134,13 @@ public class PlayerService : IPlayerService
             .Include(p => p.Team)
             .Include(p => p.User)
             .FirstOrDefaultAsync(p => p.Id == id);
+    }
+    
+    public async Task<IEnumerable<PlayerResponseDto>> GetPlayersForTeamAsync(int teamId)
+    {
+        return await _context.Players
+            .Where(p => p.TeamId == teamId)
+            .ProjectTo<PlayerResponseDto>(_mapper.ConfigurationProvider)
+            .ToListAsync();
     }
 }

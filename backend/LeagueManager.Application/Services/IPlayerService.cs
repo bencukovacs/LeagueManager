@@ -11,4 +11,5 @@ public interface IPlayerService
     Task<PlayerResponseDto?> UpdatePlayerAsync(int id, PlayerDto playerDto);
     Task DeletePlayerAsync(int id);
     Task<Player?> GetDomainPlayerByIdAsync(int id);
+    Task<IEnumerable<PlayerResponseDto>> GetPlayersForTeamAsync(int teamId);
 }

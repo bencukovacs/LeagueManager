@@ -25,3 +25,15 @@ export interface Result {
   awayScore: number;
   status: string;
 }
+
+export interface PlayerResponseDto {
+  id: number;
+  name: string;
+  teamId: number;
+  teamName: string;
+}
+
+export interface MyTeamResponse {
+  team: Team;
+  userRole: 'Leader' | 'AssistantLeader' | 'Member';
+}
