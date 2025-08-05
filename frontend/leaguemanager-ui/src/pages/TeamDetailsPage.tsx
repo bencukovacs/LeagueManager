@@ -1,24 +1,40 @@
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import apiClient from '../api/apiClient';
-import type { Team } from '../types';
+import type { PlayerResponseDto, Team } from '../types'; 
+import { useAuth } from '../contexts/AuthContext';
+import TeamManagement from '../features/teams/TeamManagement';
 
-// This function fetches the data for a single team
 const fetchTeamDetails = async (teamId: string): Promise<Team> => {
   const { data } = await apiClient.get(`/teams/${teamId}`);
   return data;
 };
 
+// Add the fetch function for the roster
+const fetchRoster = async (teamId: string): Promise<PlayerResponseDto[]> => {
+  const { data } = await apiClient.get(`/teams/${teamId}/players`);
+  return data;
+};
+
 export default function TeamDetailsPage() {
   const { teamId } = useParams<{ teamId: string }>();
+  const { isAuthenticated } = useAuth();
 
-  const { data: team, isLoading, isError } = useQuery({
+  // Query for the team details
+  const { data: team, isLoading: isTeamLoading, isError } = useQuery({
     queryKey: ['team', teamId],
     queryFn: () => fetchTeamDetails(teamId!),
-    enabled: !!teamId, // Only run the query if teamId is available
+    enabled: !!teamId,
   });
 
-  if (isLoading) {
+  // Add a second query to fetch the roster, dependent on the first
+  const { data: roster, isLoading: isRosterLoading } = useQuery({
+    queryKey: ['roster', teamId],
+    queryFn: () => fetchRoster(teamId!),
+    enabled: !!teamId, // Only runs if teamId is available
+  });
+
+  if (isTeamLoading) {
     return <div className="p-4">Loading team details...</div>;
   }
 
@@ -36,7 +52,15 @@ export default function TeamDetailsPage() {
         <p><strong>Primary Color:</strong> {team.primaryColor || 'Not set'}</p>
         <p><strong>Secondary Color:</strong> {team.secondaryColor || 'Not set'}</p>
       </div>
-      {/* We will add the player roster here later */}
+      
+      {/* Pass the roster data down to the management component */}
+      {isAuthenticated && (
+        <TeamManagement 
+          team={team} 
+          roster={roster || []} 
+          isRosterLoading={isRosterLoading} 
+        />
+      )}
     </div>
   );
 }

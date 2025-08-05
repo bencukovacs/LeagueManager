@@ -15,6 +15,8 @@ import TeamDetailsPage from './pages/TeamDetailsPage'
 import AdminDashboardPage from './pages/AdminDashboardPage'
 import ProtectedRoute from './components/ProtectedRoute'
 import MyTeamPage from './pages/MyTeamPage'
+import AdminManageTeamsPage from './pages/AdminManageTeamsPage'
+import AdminLayout from './pages/AdminLayout'
 
 const queryClient = new QueryClient()
 
@@ -41,10 +43,16 @@ const router = createBrowserRouter([
 
       // --- ROUTES FOR ADMINS ONLY ---
       {
-        element: <ProtectedRoute allowedRoles={['Admin']} />, // Requires "Admin" role
+        path: "admin", // The base path for all admin pages
+        element: <ProtectedRoute allowedRoles={['Admin']} />, // Protect the entire section
         children: [
-          { path: "admin", element: <AdminDashboardPage /> },
-          // Add other admin-only routes here later
+          {
+            element: <AdminLayout />, // Use the new layout as the shell
+            children: [
+              { index: true, element: <AdminDashboardPage /> }, // /admin shows the dashboard
+              { path: "teams", element: <AdminManageTeamsPage /> }, // /admin/teams shows the management page
+            ],
+          },
         ],
       },
     ],

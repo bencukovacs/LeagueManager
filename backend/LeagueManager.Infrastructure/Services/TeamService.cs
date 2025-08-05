@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using LeagueManager.Application.Dtos;
@@ -6,7 +7,6 @@ using LeagueManager.Domain.Models;
 using LeagueManager.Infrastructure.Data;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
 
 namespace LeagueManager.Infrastructure.Services;
 
@@ -46,11 +46,30 @@ public class TeamService : ITeamService
 
     public async Task<TeamResponseDto> CreateTeamAsync(CreateTeamDto teamDto)
     {
-        // Get the ID of the currently logged-in user
-        var currentUserId = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrEmpty(currentUserId))
+        var currentUser = _httpContextAccessor.HttpContext?.User;
+        if (currentUser == null)
         {
             throw new UnauthorizedAccessException("User is not authenticated.");
+        }
+
+        var currentUserId = currentUser.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(currentUserId))
+        {
+            throw new UnauthorizedAccessException("User ID not found in claims.");
+        }
+
+
+        if (!currentUser.IsInRole("Admin"))
+        {
+            // Check if a non-admin user already manages a team.
+            var userAlreadyManagesTeam = await _context.TeamMemberships
+                .AnyAsync(m => m.UserId == currentUserId && (m.Role == TeamRole.Leader || m.Role == TeamRole.AssistantLeader));
+
+            if (userAlreadyManagesTeam)
+            {
+                // If they do, throw an exception to prevent them from creating another one.
+                throw new InvalidOperationException("You already manage a team and cannot create another one.");
+            }
         }
 
         var team = _mapper.Map<Team>(teamDto);
