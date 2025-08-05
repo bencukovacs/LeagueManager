@@ -9,6 +9,7 @@ public interface ITeamService
     Task<IEnumerable<TeamResponseDto>> GetAllTeamsForAdminAsync();
     Task<TeamResponseDto?> GetTeamByIdAsync(int id);
     Task<TeamResponseDto> CreateTeamAsync(CreateTeamDto teamDto);
+    Task<TeamResponseDto> CreateTeamAsAdminAsync(CreateTeamDto teamDto);
     Task<TeamResponseDto?> UpdateTeamAsync(int id, CreateTeamDto teamDto);
     Task<bool> DeleteTeamAsync(int id);
     Task<TeamResponseDto?> ApproveTeamAsync(int teamId);

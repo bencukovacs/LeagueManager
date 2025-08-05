@@ -62,6 +62,14 @@ public class TeamsController : ControllerBase
         }
     }
 
+    [HttpPost("admin")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> CreateTeamAsAdmin([FromBody] CreateTeamDto createTeamDto)
+    {
+        var newTeam = await _teamService.CreateTeamAsAdminAsync(createTeamDto);
+        return CreatedAtAction(nameof(GetTeam), new { id = newTeam.Id }, newTeam);
+    }
+
     [HttpPatch("{id}/approve")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> ApproveTeam(int id)

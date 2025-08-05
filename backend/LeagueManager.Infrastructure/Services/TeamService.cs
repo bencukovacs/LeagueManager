@@ -58,7 +58,6 @@ public class TeamService : ITeamService
             throw new UnauthorizedAccessException("User ID not found in claims.");
         }
 
-
         if (!currentUser.IsInRole("Admin"))
         {
             // Check if a non-admin user already manages a team.
@@ -88,6 +87,19 @@ public class TeamService : ITeamService
             Role = TeamRole.Leader
         };
         _context.TeamMemberships.Add(membership);
+        await _context.SaveChangesAsync();
+
+        return _mapper.Map<TeamResponseDto>(team);
+    }
+
+    public async Task<TeamResponseDto> CreateTeamAsAdminAsync(CreateTeamDto teamDto)
+    {
+        var team = _mapper.Map<Team>(teamDto);
+        
+        // Admins create teams that are instantly approved
+        team.Status = TeamStatus.Approved;
+
+        _context.Teams.Add(team);
         await _context.SaveChangesAsync();
 
         return _mapper.Map<TeamResponseDto>(team);
