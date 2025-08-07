@@ -95,7 +95,7 @@ public class TeamService : ITeamService
     public async Task<TeamResponseDto> CreateTeamAsAdminAsync(CreateTeamDto teamDto)
     {
         var team = _mapper.Map<Team>(teamDto);
-        
+
         // Admins create teams that are instantly approved
         team.Status = TeamStatus.Approved;
 
@@ -160,7 +160,7 @@ public class TeamService : ITeamService
         await _context.SaveChangesAsync();
         return true;
     }
-    
+
     public async Task<IEnumerable<TeamResponseDto>> GetPendingTeamsAsync()
     {
         return await _context.Teams
@@ -195,5 +195,34 @@ public class TeamService : ITeamService
         };
 
         return response;
+    }
+    
+    public async Task<IEnumerable<FixtureResponseDto>> GetFixturesForMyTeamAsync()
+    {
+        var currentUserId = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(currentUserId))
+        {
+            return Enumerable.Empty<FixtureResponseDto>();
+        }
+
+        // Find the team ID for the current user
+        var teamId = await _context.TeamMemberships
+            .Where(m => m.UserId == currentUserId)
+            .Select(m => (int?)m.TeamId) // Cast to nullable int to handle no-team case
+            .FirstOrDefaultAsync();
+
+        if (teamId == null)
+        {
+            return Enumerable.Empty<FixtureResponseDto>();
+        }
+
+        // Fetch all fixtures where the team is either home or away
+        var fixtures = await _context.Fixtures
+            .Where(f => f.HomeTeamId == teamId.Value || f.AwayTeamId == teamId.Value)
+            .OrderByDescending(f => f.KickOffDateTime) // Show most recent first
+            .ProjectTo<FixtureResponseDto>(_mapper.ConfigurationProvider)
+            .ToListAsync();
+
+        return fixtures;
     }
 }

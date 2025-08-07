@@ -15,4 +15,5 @@ public interface ITeamService
     Task<TeamResponseDto?> ApproveTeamAsync(int teamId);
     Task<IEnumerable<TeamResponseDto>> GetPendingTeamsAsync();
     Task<MyTeamResponseDto?> GetMyTeamAsync();
+    Task<IEnumerable<FixtureResponseDto>> GetFixturesForMyTeamAsync();
 }

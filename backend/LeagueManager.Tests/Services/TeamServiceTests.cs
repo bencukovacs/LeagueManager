@@ -8,6 +8,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
 using LeagueManager.Application.MappingProfiles;
+using LeagueManager.Application.Dtos;
 
 namespace LeagueManager.Tests.Services;
 
@@ -127,5 +128,92 @@ public class TeamServiceTests : IDisposable
 
         // Assert
         Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task GetFixturesForMyTeamAsync_WhenUserIsTeamLeader_ReturnsOnlyTheirFixtures()
+    {
+        // Arrange
+        await using var context = GetDbContext();
+        var user = new User { Id = "user-123", UserName = "testuser" };
+        var team1 = new Team { Id = 1, Name = "My Team" };
+        var team2 = new Team { Id = 2, Name = "Opponent Team" };
+        var team3 = new Team { Id = 3, Name = "Other Team" };
+        var membership = new TeamMembership { UserId = "user-123", TeamId = 1, Role = TeamRole.Leader };
+
+        // Fixture 1: User's team is Home
+        var fixture1 = new Fixture { Id = 1, HomeTeamId = 1, AwayTeamId = 2 };
+        // Fixture 2: User's team is Away
+        var fixture2 = new Fixture { Id = 2, HomeTeamId = 2, AwayTeamId = 1 };
+        // Fixture 3: Should be ignored
+        var fixture3 = new Fixture { Id = 3, HomeTeamId = 2, AwayTeamId = 3 };
+
+        context.Users.Add(user);
+        context.Teams.AddRange(team1, team2, team3);
+        context.TeamMemberships.Add(membership);
+        context.Fixtures.AddRange(fixture1, fixture2, fixture3);
+        await context.SaveChangesAsync();
+
+        var mockHttpContextAccessor = CreateMockHttpContextAccessor("user-123");
+        var service = new TeamService(context, _mapper, mockHttpContextAccessor.Object);
+
+        // Act
+        var result = (await service.GetFixturesForMyTeamAsync()).ToList();
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(2, result.Count); // Should only return the two relevant fixtures
+        Assert.Contains(result, f => f.Id == 1);
+        Assert.Contains(result, f => f.Id == 2);
+        Assert.DoesNotContain(result, f => f.Id == 3);
+    }
+
+    [Fact]
+    public async Task GetFixturesForMyTeamAsync_WhenUserIsNotOnATeam_ReturnsEmptyList()
+    {
+        // Arrange
+        await using var context = GetDbContext();
+        var user = new User { Id = "user-123", UserName = "testuser" };
+        context.Users.Add(user);
+        await context.SaveChangesAsync();
+
+        var mockHttpContextAccessor = CreateMockHttpContextAccessor("user-123");
+        var service = new TeamService(context, _mapper, mockHttpContextAccessor.Object);
+
+        // Act
+        var result = await service.GetFixturesForMyTeamAsync();
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Empty(result);
+    }
+    [Fact]
+    public async Task CreateTeamAsAdminAsync_CreatesTeamWithApprovedStatus()
+    {
+        // --- ARRANGE ---
+        // We don't need a logged-in user for this test, so the HttpContextAccessor can be a simple mock.
+        await using var context = GetDbContext();
+        var mockHttpContextAccessor = new Mock<IHttpContextAccessor>();
+        var service = new TeamService(context, _mapper, mockHttpContextAccessor.Object);
+        var dto = new CreateTeamDto { Name = "Admin Created Team", PrimaryColor = "Black" };
+
+        // --- ACT ---
+        // Call the admin-specific creation method
+        var result = await service.CreateTeamAsAdminAsync(dto);
+
+        // --- ASSERT ---
+        // 1. Verify the returned DTO is correct
+        Assert.NotNull(result);
+        Assert.Equal("Admin Created Team", result.Name);
+        Assert.Equal("Approved", result.Status);
+
+        // 2. Verify the entity in the database is correct
+        var teamInDb = await context.Teams.FirstOrDefaultAsync(t => t.Name == "Admin Created Team");
+        Assert.NotNull(teamInDb);
+        Assert.Equal(TeamStatus.Approved, teamInDb.Status);
+
+        // 3. Verify that NO TeamMembership record was created
+        var membershipCount = await context.TeamMemberships.CountAsync();
+        Assert.Equal(0, membershipCount);
     }
 }

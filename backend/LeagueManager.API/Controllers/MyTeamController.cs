@@ -27,4 +27,11 @@ public class MyTeamController : ControllerBase
         }
         return Ok(team);
     }
+
+    [HttpGet("fixtures")]
+    public async Task<IActionResult> GetMyTeamFixtures()
+    {
+        var fixtures = await _teamService.GetFixturesForMyTeamAsync();
+        return Ok(fixtures);
+    }
 }
