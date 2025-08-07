@@ -1,12 +1,16 @@
+using Xunit;
 using Moq;
 using LeagueManager.API.Controllers;
 using LeagueManager.Application.Services;
 using LeagueManager.Application.Dtos;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using System;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using LeagueManager.Domain.Models;
+using System.Collections.Generic;
 
 namespace LeagueManager.Tests.Controllers;
 
@@ -22,11 +26,38 @@ public class PlayersControllerTests
         _mockAuthorizationService = new Mock<IAuthorizationService>();
         _controller = new PlayersController(_mockPlayerService.Object, _mockAuthorizationService.Object);
 
-        // Set up a default user for the controller's context
         _controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity()) }
         };
+    }
+
+    [Fact]
+    public async Task GetPlayer_WhenPlayerExists_ReturnsOkResult()
+    {
+        // Arrange
+        var playerDto = new PlayerResponseDto { Id = 1, Name = "Test Player", TeamId = 1, TeamName = "Team A" };
+        _mockPlayerService.Setup(s => s.GetPlayerByIdAsync(1)).ReturnsAsync(playerDto);
+
+        // Act
+        var result = await _controller.GetPlayer(1);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.IsType<PlayerResponseDto>(okResult.Value);
+    }
+
+    [Fact]
+    public async Task GetPlayer_WhenPlayerDoesNotExist_ReturnsNotFound()
+    {
+        // Arrange
+        _mockPlayerService.Setup(s => s.GetPlayerByIdAsync(99)).ReturnsAsync((PlayerResponseDto?)null);
+
+        // Act
+        var result = await _controller.GetPlayer(99);
+
+        // Assert
+        Assert.IsType<NotFoundResult>(result);
     }
 
     [Fact]
@@ -46,7 +77,7 @@ public class PlayersControllerTests
     }
 
     [Fact]
-    public async Task CreatePlayer_WhenServiceThrowsUnauthorized_ReturnsForbid()
+    public async Task CreatePlayer_WhenServiceThrowsUnauthorized_ReturnsForbidden()
     {
         // Arrange
         var playerDto = new PlayerDto { Name = "New Player", TeamId = 1 };
@@ -57,11 +88,14 @@ public class PlayersControllerTests
         var result = await _controller.CreatePlayer(playerDto);
 
         // Assert
-        var forbidResult = Assert.IsType<ForbidResult>(result);
+        var objectResult = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(StatusCodes.Status403Forbidden, objectResult.StatusCode);
+        Assert.NotNull(objectResult.Value);
+        Assert.Equal("Not authorized.", objectResult.Value.GetType().GetProperty("Message")?.GetValue(objectResult.Value, null));
     }
 
     [Fact]
-    public async Task UpdatePlayer_WhenAuthorizationSucceeds_ReturnsOkResult()
+    public async Task UpdatePlayer_WhenAuthorized_ReturnsOkResult()
     {
         // Arrange
         var dto = new PlayerDto { Name = "Updated Name", TeamId = 1 };
@@ -80,6 +114,25 @@ public class PlayersControllerTests
 
         // Assert
         Assert.IsType<OkObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task UpdatePlayer_WhenUnauthorized_ReturnsForbid()
+    {
+        // Arrange
+        var dto = new PlayerDto { Name = "Updated Name", TeamId = 1 };
+        var playerDomainModel = new Player { Id = 1, Name = "Old Name", TeamId = 1 };
+        _mockPlayerService.Setup(s => s.GetDomainPlayerByIdAsync(1)).ReturnsAsync(playerDomainModel);
+
+        _mockAuthorizationService
+            .Setup(s => s.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), "CanUpdatePlayer"))
+            .ReturnsAsync(AuthorizationResult.Failed());
+
+        // Act
+        var result = await _controller.UpdatePlayer(1, dto);
+
+        // Assert
+        Assert.IsType<ForbidResult>(result);
     }
 
     [Fact]
@@ -111,7 +164,7 @@ public class PlayersControllerTests
     }
 
     [Fact]
-    public async Task DeletePlayer_WhenUnauthorized_ReturnsForbid()
+    public async Task DeletePlayer_WhenUnauthorized_ReturnsForbidden()
     {
         // Arrange
         _mockPlayerService.Setup(s => s.DeletePlayerAsync(1))
@@ -121,6 +174,9 @@ public class PlayersControllerTests
         var result = await _controller.DeletePlayer(1);
 
         // Assert
-        var forbidResult = Assert.IsType<ForbidResult>(result);
+        var objectResult = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(StatusCodes.Status403Forbidden, objectResult.StatusCode);
+        Assert.NotNull(objectResult.Value);
+        Assert.Equal("Not authorized.", objectResult.Value.GetType().GetProperty("Message")?.GetValue(objectResult.Value, null));
     }
 }

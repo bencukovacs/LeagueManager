@@ -49,7 +49,11 @@ public class PlayersController : ControllerBase
         }
         catch (ArgumentException ex) { return BadRequest(ex.Message); }
         catch (InvalidOperationException ex) { return BadRequest(ex.Message); }
-        catch (UnauthorizedAccessException ex) { return Forbid(ex.Message); }
+        catch (UnauthorizedAccessException ex) 
+        { 
+            // Return a 403 Forbidden status with a custom error object
+            return StatusCode(StatusCodes.Status403Forbidden, new { Message = ex.Message });
+        }
     }
 
     [HttpDelete("{id}")]
@@ -62,7 +66,11 @@ public class PlayersController : ControllerBase
             return NoContent();
         }
         catch (KeyNotFoundException ex) { return NotFound(ex.Message); }
-        catch (UnauthorizedAccessException ex) { return Forbid(ex.Message); }
+        catch (UnauthorizedAccessException ex) 
+        { 
+            // Return a 403 Forbidden status with a custom error object
+            return StatusCode(StatusCodes.Status403Forbidden, new { Message = ex.Message });
+        }
     }
 
     [HttpPut("{id}")]
