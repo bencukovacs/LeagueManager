@@ -3,12 +3,15 @@ import apiClient from '../../api/apiClient';
 import type { PlayerResponseDto } from '../../types';
 import { useState } from 'react';
 
-// The addPlayer function is unchanged
 const addPlayer = async ({ teamId, name }: { teamId: number; name: string }) => {
   await apiClient.post('/players', { name, teamId });
 };
 
-// The component now receives the roster and loading state as props
+const removePlayer = async (playerId: number) => {
+  await apiClient.delete(`/players/${playerId}`);
+};
+
+// The component receives the roster and loading state as props
 interface RosterManagementProps {
   teamId: number;
   roster: PlayerResponseDto[];
@@ -20,17 +23,25 @@ export default function RosterManagement({ teamId, roster, isLoading }: RosterMa
   const [newPlayerName, setNewPlayerName] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  // The mutation logic is unchanged
   const addPlayerMutation = useMutation({
     mutationFn: addPlayer,
     onSuccess: () => {
-      // This will now correctly trigger a refetch in the parent component
-      queryClient.invalidateQueries({ queryKey: ['roster', teamId] });
+      queryClient.invalidateQueries({ queryKey: ['roster'] });
       setNewPlayerName('');
       setError(null);
     },
     onError: (err: any) => {
       setError(err.response?.data?.message || 'Failed to add player.');
+    }
+  });
+
+  const removePlayerMutation = useMutation({
+    mutationFn: removePlayer,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['roster'] });
+    },
+    onError: (err: any) => {
+      setError(err.response?.data?.message || 'Failed to remove player.');
     }
   });
 
@@ -68,8 +79,15 @@ export default function RosterManagement({ teamId, roster, isLoading }: RosterMa
         <ul className="space-y-2">
           {/* The component now renders the roster passed in via props */}
           {roster.map((player) => (
-            <li key={player.id} className="p-2 bg-gray-100 rounded">
-              {player.name}
+            <li key={player.id} className="p-2 bg-sky-400 rounded">
+              <span>{player.name}</span>
+              <button
+                onClick={() => removePlayerMutation.mutate(player.id)}
+                disabled={removePlayerMutation.isPending}
+                className="px-2 py-1 text-xs font-medium text-red-700 bg-red-100 rounded hover:bg-red-200 disabled:bg-gray-300"
+              >
+                Remove
+              </button>
             </li>
           ))}
         </ul>

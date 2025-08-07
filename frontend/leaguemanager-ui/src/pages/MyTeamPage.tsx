@@ -5,13 +5,11 @@ import { Link } from 'react-router-dom';
 import RosterManagement from '../features/teams/RosterManagement';
 import EditTeamForm from '../features/teams/EditTeamForm';
 
-// Fetch function for the user's team
 const fetchMyTeam = async (): Promise<MyTeamResponse> => {
   const { data } = await apiClient.get('/my-team');
   return data;
 };
 
-// Fetch function for the team's roster
 const fetchRoster = async (teamId: number): Promise<PlayerResponseDto[]> => {
   const { data } = await apiClient.get(`/teams/${teamId}/players`);
   return data;
@@ -54,7 +52,6 @@ export default function MyTeamPage() {
   const { data: roster, isLoading: isRosterLoading } = useQuery({
     queryKey: ['roster', teamId],
     queryFn: () => fetchRoster(teamId!),
-    // This query will only run if teamId is available
     enabled: !!teamId,
   });
 
