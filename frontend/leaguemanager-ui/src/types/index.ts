@@ -37,3 +37,16 @@ export interface MyTeamResponse {
   team: Team;
   userRole: 'Leader' | 'AssistantLeader' | 'Member';
 }
+
+export interface FixtureResponseDto {
+  id: number;
+  homeTeam: Team;
+  awayTeam: Team;
+  kickOffDateTime: string; 
+  status: string;
+  location: {
+    id: number;
+    name: string;
+  } | null;
+  result: Result | null;
+}

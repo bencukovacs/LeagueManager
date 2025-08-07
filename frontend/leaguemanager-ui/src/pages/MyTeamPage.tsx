@@ -95,9 +95,14 @@ export default function MyTeamPage() {
 
       {isManager && (
         <div className="mt-6">
-          <h2 className="text-2xl font-semibold border-b pb-2 mb-4">Team Management</h2>
+          <div className="flex justify-between items-center border-b pb-2 mb-4">
+            <h2 className="text-2xl font-semibold">Team Management</h2>
+            {/* 3. Add the link here */}
+            <Link to="/my-team/fixtures" className="text-blue-600 hover:underline">
+              View All Fixtures →
+            </Link>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Pass the roster data and loading state down as props */}
             <RosterManagement teamId={team.id} roster={roster || []} isLoading={isRosterLoading} />
             <EditTeamForm team={team} />
           </div>

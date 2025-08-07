@@ -17,6 +17,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import MyTeamPage from './pages/MyTeamPage'
 import AdminManageTeamsPage from './pages/AdminManageTeamsPage'
 import AdminLayout from './pages/AdminLayout'
+import MyFixturesPage from './pages/MyFixturesPage'
 
 const queryClient = new QueryClient()
 
@@ -37,6 +38,7 @@ const router = createBrowserRouter([
         children: [
           { path: "create-team", element: <CreateTeamPage /> },
           { path: "my-team", element: <MyTeamPage /> },
+          { path: "my-team/fixtures", element: <MyFixturesPage /> },
           // Add other general user routes here later
         ],
       },
