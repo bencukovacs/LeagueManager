@@ -20,10 +20,13 @@ public class MappingProfile : Profile
         CreateMap<CreateTeamDto, Team>();
 
         CreateMap<Fixture, FixtureResponseDto>()
-            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()));
+            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
+            .ForMember(dest => dest.HomeTeamRoster, opt => opt.MapFrom(src => src.HomeTeam.Players))
+            .ForMember(dest => dest.AwayTeamRoster, opt => opt.MapFrom(src => src.AwayTeam.Players));
 
         CreateMap<Result, ResultResponseDto>()
             .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()));
+
 
         CreateMap<MOMVote, MomVoteResponseDto>()
             .ForMember(dest => dest.VotingTeamName, opt => opt.MapFrom(src => src.VotingTeam != null ? src.VotingTeam.Name : string.Empty))

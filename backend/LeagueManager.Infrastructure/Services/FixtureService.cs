@@ -32,12 +32,27 @@ public class FixtureService : IFixtureService
     }
 
     public async Task<FixtureResponseDto?> GetFixtureByIdAsync(int id)
-    {
-        return await _context.Fixtures
-            .Where(f => f.Id == id)
-            .ProjectTo<FixtureResponseDto>(_mapper.ConfigurationProvider)
-            .FirstOrDefaultAsync(f => f.Id == id);
-    }
+{
+    // We can't use ProjectTo here because the roster logic is too complex for it to figure out.
+    // We'll fetch the full entity and then map it.
+    var fixture = await _context.Fixtures
+        .Include(f => f.HomeTeam).ThenInclude(t => t.Players) // Include players for the home team
+        .Include(f => f.AwayTeam).ThenInclude(t => t.Players) // Include players for the away team
+        .Include(f => f.Location)
+        .Include(f => f.Result)
+        .AsNoTracking()
+        .FirstOrDefaultAsync(f => f.Id == id);
+
+    if (fixture == null) return null;
+
+    var fixtureDto = _mapper.Map<FixtureResponseDto>(fixture);
+    
+    // Manually map the rosters
+    fixtureDto.HomeTeamRoster = _mapper.Map<List<PlayerResponseDto>>(fixture.HomeTeam.Players);
+    fixtureDto.AwayTeamRoster = _mapper.Map<List<PlayerResponseDto>>(fixture.AwayTeam.Players);
+
+    return fixtureDto;
+}
 
         public async Task<IEnumerable<MomVoteResponseDto>> GetMomVotesForFixtureAsync(int fixtureId)
     {

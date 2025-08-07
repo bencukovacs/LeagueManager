@@ -14,4 +14,5 @@ public class Team
     public string? PrimaryColor { get; set; }
     public string? SecondaryColor { get; set; }
     public TeamStatus Status { get; set; } = TeamStatus.PendingApproval;
+    public ICollection<Player> Players { get; set; } = new List<Player>();
 }

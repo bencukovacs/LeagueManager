@@ -42,11 +42,14 @@ export interface FixtureResponseDto {
   id: number;
   homeTeam: Team;
   awayTeam: Team;
-  kickOffDateTime: string; 
+  kickOffDateTime: string;
   status: string;
   location: {
     id: number;
     name: string;
   } | null;
   result: Result | null;
+  // Add these two properties
+  homeTeamRoster: PlayerResponseDto[];
+  awayTeamRoster: PlayerResponseDto[];
 }

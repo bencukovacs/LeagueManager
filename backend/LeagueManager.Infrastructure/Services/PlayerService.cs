@@ -59,37 +59,42 @@ public class PlayerService : IPlayerService
 
     public async Task<PlayerResponseDto> CreatePlayerAsync(PlayerDto playerDto)
     {
-        var currentUserId = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var currentUser = _httpContextAccessor.HttpContext?.User;
+        var currentUserId = currentUser?.FindFirstValue(ClaimTypes.NameIdentifier);
+
         if (string.IsNullOrEmpty(currentUserId))
         {
             throw new UnauthorizedAccessException("User is not authenticated.");
         }
 
-        var canManageTeam = await _context.TeamMemberships
-            .AnyAsync(m => m.TeamId == playerDto.TeamId && m.UserId == currentUserId &&
-                           (m.Role == TeamRole.Leader || m.Role == TeamRole.AssistantLeader));
-
-        var userAlreadyHasPlayerProfile = await _context.Players.AnyAsync(p => p.UserId == currentUserId);
-
-        // Authorization check: Allow if they are a manager OR if they don't have a profile yet.
-        if (!canManageTeam && userAlreadyHasPlayerProfile)
+        // --- THIS IS THE CORRECTED LOGIC ---
+        // Business Rule: A non-admin can only create a player if they don't already have one linked.
+        if (!currentUser.IsInRole("Admin"))
         {
-            throw new UnauthorizedAccessException("User is not authorized to create a player for this team or already has a player profile.");
+            var userAlreadyHasPlayerProfile = await _context.Players.AnyAsync(p => p.UserId == currentUserId);
+            if (userAlreadyHasPlayerProfile)
+            {
+                throw new InvalidOperationException("This user account is already linked to a player profile.");
+            }
         }
+        // --- END CORRECTION ---
 
         var team = await _context.Teams.FindAsync(playerDto.TeamId)
             ?? throw new ArgumentException("Invalid Team ID.");
 
         var player = _mapper.Map<Player>(playerDto);
 
-        // If the user is creating their own profile, link it to their user account.
-        if (!canManageTeam)
+        // If the user creating the player is not a manager of the team,
+        // we assume they are creating their own profile and link it.
+        var isManager = await _context.TeamMemberships.AnyAsync(m => m.TeamId == playerDto.TeamId && m.UserId == currentUserId && (m.Role == TeamRole.Leader || m.Role == TeamRole.AssistantLeader));
+        if (!isManager)
         {
             player.UserId = currentUserId;
         }
 
         _context.Players.Add(player);
         await _context.SaveChangesAsync();
+
         return await GetPlayerByIdAsync(player.Id)
                ?? throw new InvalidOperationException("Could not retrieve created player.");
     }

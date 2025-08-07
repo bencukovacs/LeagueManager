@@ -26,9 +26,9 @@ export default function StandingsPage() {
   return (
     <div className="p-4">
       <h1 className="text-2xl font-bold mb-4">League Standings</h1>
-      <table className="min-w-full bg-white border">
+      <table className="min-w-full bg-sky-600 border">
         <thead>
-          <tr className="bg-gray-200">
+          <tr className="bg-sky-400">
             <th className="py-2 px-4 border-b">Team</th>
             <th className="py-2 px-4 border-b">P</th>
             <th className="py-2 px-4 border-b">W</th>

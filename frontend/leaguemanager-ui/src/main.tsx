@@ -18,6 +18,7 @@ import MyTeamPage from './pages/MyTeamPage'
 import AdminManageTeamsPage from './pages/AdminManageTeamsPage'
 import AdminLayout from './pages/AdminLayout'
 import MyFixturesPage from './pages/MyFixturesPage'
+import SubmitResultPage from './pages/SubmitResultPage'
 
 const queryClient = new QueryClient()
 
@@ -39,6 +40,7 @@ const router = createBrowserRouter([
           { path: "create-team", element: <CreateTeamPage /> },
           { path: "my-team", element: <MyTeamPage /> },
           { path: "my-team/fixtures", element: <MyFixturesPage /> },
+          { path: "submit-result/:fixtureId", element: <SubmitResultPage /> },
           // Add other general user routes here later
         ],
       },
