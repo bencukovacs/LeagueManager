@@ -57,38 +57,39 @@ public class PlayerService : IPlayerService
         return _mapper.Map<PlayerResponseDto>(player);
     }
 
-    public async Task<PlayerResponseDto> CreatePlayerAsync(PlayerDto playerDto)
+     public async Task<PlayerResponseDto> CreatePlayerAsync(PlayerDto playerDto)
     {
-        var currentUser = _httpContextAccessor.HttpContext?.User;
-        var currentUserId = currentUser?.FindFirstValue(ClaimTypes.NameIdentifier);
+        var currentUser = _httpContextAccessor.HttpContext?.User 
+            ?? throw new UnauthorizedAccessException("User context is not available.");
+        var currentUserId = currentUser.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? throw new UnauthorizedAccessException("User is not authenticated.");
 
-        if (string.IsNullOrEmpty(currentUserId))
+        var team = await _context.Teams.FindAsync(playerDto.TeamId)
+            ?? throw new ArgumentException("Invalid Team ID.");
+
+        var isManager = await _context.TeamMemberships.AnyAsync(m => 
+            m.TeamId == playerDto.TeamId && m.UserId == currentUserId &&
+            (m.Role == TeamRole.Leader || m.Role == TeamRole.AssistantLeader));
+        
+        var isAdmin = currentUser.IsInRole("Admin");
+
+        var player = _mapper.Map<Player>(playerDto);
+
+        // SCENARIO 1: A manager or admin is adding a player to a roster.
+        if (isManager || isAdmin)
         {
-            throw new UnauthorizedAccessException("User is not authenticated.");
+            // The player's UserId should be null. This is correct.
         }
-
-        // --- THIS IS THE CORRECTED LOGIC ---
-        // Business Rule: A non-admin can only create a player if they don't already have one linked.
-        if (!currentUser.IsInRole("Admin"))
+        // SCENARIO 2: A regular user is creating their own player profile.
+        else 
         {
+            // Business Rule: A user can only have one player profile.
             var userAlreadyHasPlayerProfile = await _context.Players.AnyAsync(p => p.UserId == currentUserId);
             if (userAlreadyHasPlayerProfile)
             {
                 throw new InvalidOperationException("This user account is already linked to a player profile.");
             }
-        }
-        // --- END CORRECTION ---
-
-        var team = await _context.Teams.FindAsync(playerDto.TeamId)
-            ?? throw new ArgumentException("Invalid Team ID.");
-
-        var player = _mapper.Map<Player>(playerDto);
-
-        // If the user creating the player is not a manager of the team,
-        // we assume they are creating their own profile and link it.
-        var isManager = await _context.TeamMemberships.AnyAsync(m => m.TeamId == playerDto.TeamId && m.UserId == currentUserId && (m.Role == TeamRole.Leader || m.Role == TeamRole.AssistantLeader));
-        if (!isManager)
-        {
+            // Link this new player to the current user's account.
             player.UserId = currentUserId;
         }
 

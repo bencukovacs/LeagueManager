@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '../api/apiClient';
 
 export default function CreateTeamPage() {
@@ -8,32 +9,31 @@ export default function CreateTeamPage() {
   const [secondaryColor, setSecondaryColor] = useState('');
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-
-    try {
-      const response = await apiClient.post('/teams', { name, primaryColor, secondaryColor });
+  const createTeamMutation = useMutation({
+    mutationFn: (teamData: { name: string; primaryColor: string; secondaryColor: string; }) => 
+      apiClient.post('/teams', teamData),
+    onSuccess: (response) => {
+      // When the mutation succeeds, invalidate the navbar's query
+      queryClient.invalidateQueries({ queryKey: ['myTeamStatus'] });
+      
+      // After successful creation, redirect to the new team's page
       navigate(`/teams/${response.data.id}`); 
-    } catch (err: any) {
-      // We now intelligently extract the error message string
+    },
+    onError: (err: any) => {
       if (err.response && err.response.data) {
-        // Handle the object from our middleware ({ Message: "..." })
-        if (typeof err.response.data === 'object' && err.response.data.Message) {
-          setError(err.response.data.Message);
-        } 
-        // Handle simple string errors from our controller's BadRequest("...")
-        else if (typeof err.response.data === 'string') {
-          setError(err.response.data);
-        }
-        else {
-          setError('An unknown error occurred.');
-        }
+        setError(err.response.data.Message || err.response.data);
       } else {
         setError('An unexpected error occurred. Please try again.');
       }
     }
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    createTeamMutation.mutate({ name, primaryColor, secondaryColor });
   };
 
   return (
@@ -71,6 +71,7 @@ export default function CreateTeamPage() {
         </div>
         <button
           type="submit"
+          disabled={createTeamMutation.isPending}
           className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
         >
           Create Team

@@ -42,30 +42,14 @@ public class PlayersController : ControllerBase
     [Authorize]
     public async Task<IActionResult> CreatePlayer([FromBody] PlayerDto playerDto)
     {
-        // Authorization Check: Is the user a manager of the team they're adding a player to?
-        var authorizationResult = await _authorizationService.AuthorizeAsync(User, playerDto.TeamId, "CanManageTeam");
-        if (!authorizationResult.Succeeded)
-        {
-            // If not, return 403 Forbidden.
-            return Forbid();
-        }
-
-        // If authorization passes, call the service to handle the business logic.
         try
         {
             var newPlayer = await _playerService.CreatePlayerAsync(playerDto);
             return CreatedAtAction(nameof(GetPlayer), new { id = newPlayer.Id }, newPlayer);
         }
-        catch (ArgumentException ex) 
-        {
-            // Catches errors like "Invalid Team ID" from the service.
-            return BadRequest(ex.Message); 
-        }
-        catch (InvalidOperationException ex)
-        {
-            // Catches the business rule error "This user account is already linked to a player profile."
-            return BadRequest(ex.Message);
-        }
+        catch (ArgumentException ex) { return BadRequest(ex.Message); }
+        catch (InvalidOperationException ex) { return BadRequest(ex.Message); }
+        catch (UnauthorizedAccessException ex) { return Forbid(ex.Message); }
     }
 
     [HttpDelete("{id}")]
