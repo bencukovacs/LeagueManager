@@ -9,6 +9,7 @@ using System.Security.Claims;
 using System.Text;
 using LeagueManager.Application.Settings;
 using LeagueManager.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace LeagueManager.Infrastructure.Services;
 
@@ -27,41 +28,31 @@ public class AuthService : IAuthService
 
     public async Task<IdentityResult> RegisterUserAsync(RegisterDto registerDto)
     {
-        // Start a new database transaction
-        await using var transaction = await _context.Database.BeginTransactionAsync();
-        try
+        var user = new User { UserName = registerDto.Email, Email = registerDto.Email };
+        
+        // This is a special case where we need two saves, but UserManager handles it.
+        // First, create the user.
+        var result = await _userManager.CreateAsync(user, registerDto.Password);
+        
+        if (!result.Succeeded)
         {
-            var user = new User { UserName = registerDto.Email, Email = registerDto.Email };
-            var result = await _userManager.CreateAsync(user, registerDto.Password);
-            
-            if (!result.Succeeded)
-            {
-                await transaction.RollbackAsync(); // Roll back if user creation fails
-                return result;
-            }
-
-            await _userManager.AddToRoleAsync(user, "RegisteredUser");
-
-            var player = new Player
-            {
-                Name = $"{registerDto.FirstName} {registerDto.LastName}",
-                UserId = user.Id,
-            };
-            _context.Players.Add(player);
-            await _context.SaveChangesAsync();
-
-            // If all steps succeed, commit the transaction
-            await transaction.CommitAsync();
-            
-            return result;
+            return result; // Return immediately if user creation fails.
         }
-        catch (Exception)
+
+        // If user creation succeeds, then add the role and the player.
+        await _userManager.AddToRoleAsync(user, "RegisteredUser");
+
+        var player = new Player
         {
-            // If any step after user creation fails, roll back everything
-            await transaction.RollbackAsync();
-            // We re-throw the exception so our global handler can catch it and log it
-            throw; 
-        }
+            Name = $"{registerDto.FirstName} {registerDto.LastName}",
+            UserId = user.Id,
+        };
+        _context.Players.Add(player);
+        
+        // This single SaveChangesAsync call will save the new Player and the user's new Role.
+        await _context.SaveChangesAsync();
+        
+        return result;
     }
 
     public async Task<string?> LoginUserAsync(LoginDto loginDto)

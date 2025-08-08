@@ -22,9 +22,7 @@ public class AuthControllerTests
     public async Task Register_WhenRegistrationIsSuccessful_ReturnsOkResult()
     {
         // Arrange
-        var registerDto = new RegisterDto { Email = "test@test.com", Password = "Password123!" };
-        
-        // Mock a successful registration result
+        var registerDto = new RegisterDto { FirstName = "Test", LastName = "User", Email = "test@test.com", Password = "Password123!" };
         _mockAuthService
             .Setup(s => s.RegisterUserAsync(registerDto))
             .ReturnsAsync(IdentityResult.Success);
@@ -40,10 +38,8 @@ public class AuthControllerTests
     public async Task Register_WhenRegistrationFails_ReturnsBadRequestWithErrors()
     {
         // Arrange
-        var registerDto = new RegisterDto { Email = "test@test.com", Password = "Password123!" };
-        var errors = new List<IdentityError> { new IdentityError { Description = "Password is too weak." } };
-        
-        // Mock a failed registration result
+        var registerDto = new RegisterDto { FirstName = "Test", LastName = "User", Email = "test@test.com", Password = "Password123!" };
+        var errors = new List<IdentityError> { new() { Description = "Password is too weak." } };
         _mockAuthService
             .Setup(s => s.RegisterUserAsync(registerDto))
             .ReturnsAsync(IdentityResult.Failed(errors.ToArray()));

@@ -49,7 +49,14 @@ export interface FixtureResponseDto {
     name: string;
   } | null;
   result: Result | null;
-  // Add these two properties
   homeTeamRoster: PlayerResponseDto[];
   awayTeamRoster: PlayerResponseDto[];
+}
+
+export interface RosterRequestResponseDto {
+  id: number;
+  userName: string;
+  teamName: string;
+  type: string;
+  status: string;
 }

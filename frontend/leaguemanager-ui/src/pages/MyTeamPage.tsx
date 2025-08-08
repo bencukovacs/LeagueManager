@@ -4,18 +4,26 @@ import type { MyTeamResponse, PlayerResponseDto, Team } from '../types';
 import { Link } from 'react-router-dom';
 import RosterManagement from '../features/teams/RosterManagement';
 import EditTeamForm from '../features/teams/EditTeamForm';
+import JoinRequestsList from '../features/teams/JoinRequestsList';
 
-const fetchMyTeam = async (): Promise<MyTeamResponse> => {
-  const { data } = await apiClient.get('/my-team');
-  return data;
+// Fetch function for the user's team
+const fetchMyTeam = async (): Promise<MyTeamResponse | null> => {
+  try {
+    const { data } = await apiClient.get('/my-team');
+    return data;
+  } catch (error) {
+    // A 404 from this endpoint is an expected outcome, meaning the user is not on a team.
+    return null;
+  }
 };
 
+// Fetch function for the team's roster
 const fetchRoster = async (teamId: number): Promise<PlayerResponseDto[]> => {
   const { data } = await apiClient.get(`/teams/${teamId}/players`);
   return data;
 };
 
-// A new component for the onboarding checklist
+// A component for the onboarding checklist, shown for pending teams
 const OnboardingChecklist = ({ team, playerCount }: { team: Team, playerCount: number }) => {
   const minPlayers = 5; // This will later come from the LeagueConfiguration
 
@@ -39,11 +47,10 @@ const OnboardingChecklist = ({ team, playerCount }: { team: Team, playerCount: n
 };
 
 export default function MyTeamPage() {
-  // First query: get the user's team
-  const { data: myTeamData, isLoading: isTeamLoading, isError: isTeamError } = useQuery({
+  // First query: get the user's team and their role on it
+  const { data: myTeamData, isLoading: isTeamLoading } = useQuery({
     queryKey: ['myTeam'],
     queryFn: fetchMyTeam,
-    retry: false,
   });
 
   const teamId = myTeamData?.team?.id;
@@ -59,16 +66,22 @@ export default function MyTeamPage() {
     return <div className="p-4">Loading your team...</div>;
   }
 
-  if (isTeamError || !myTeamData) {
+  // This is the "lobby" view for users without a team
+  if (!myTeamData) {
     return (
       <div className="container mx-auto p-4 text-center">
-        <h2 className="text-xl font-semibold text-red-600">Could not load team</h2>
+        <h2 className="text-2xl font-bold">You are not on a team yet.</h2>
         <p className="text-gray-600 mt-2">
-          You do not currently manage a team.
+          You can create your own team or request to join an existing one.
         </p>
-        <Link to="/create-team" className="mt-4 inline-block px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-          Create a Team
-        </Link>
+        <div className="flex justify-center space-x-4 mt-6">
+          <Link to="/create-team" className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold">
+            Create a Team
+          </Link>
+          <Link to="/join-team" className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold">
+            Join a Team
+          </Link>
+        </div>
       </div>
     );
   }
@@ -88,7 +101,6 @@ export default function MyTeamPage() {
         </div>
       </div>
       
-      {/* Conditionally render the checklist only if the team is pending */}
       {team.status === 'PendingApproval' && (
         <OnboardingChecklist team={team} playerCount={roster?.length || 0} />
       )}
@@ -97,12 +109,12 @@ export default function MyTeamPage() {
         <div className="mt-6">
           <div className="flex justify-between items-center border-b pb-2 mb-4">
             <h2 className="text-2xl font-semibold">Team Management</h2>
-            {/* 3. Add the link here */}
             <Link to="/my-team/fixtures" className="text-blue-600 hover:underline">
               View All Fixtures →
             </Link>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <JoinRequestsList />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
             <RosterManagement teamId={team.id} roster={roster || []} isLoading={isRosterLoading} />
             <EditTeamForm team={team} />
           </div>

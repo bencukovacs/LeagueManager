@@ -14,6 +14,7 @@ public class LeagueConfigurationServiceTests : IDisposable
     private readonly SqliteConnection _connection;
     private readonly DbContextOptions<LeagueDbContext> _options;
     private readonly IMapper _mapper;
+    private bool _disposed;
 
     public LeagueConfigurationServiceTests()
     {
@@ -36,10 +37,22 @@ public class LeagueConfigurationServiceTests : IDisposable
 
     private LeagueDbContext GetDbContext() => new LeagueDbContext(_options);
 
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                _connection.Close();
+                _connection.Dispose();
+            }
+            _disposed = true;
+        }
+    }
     public void Dispose()
     {
-        _connection.Close();
-        _connection.Dispose();
+        Dispose(true);
+        GC.SuppressFinalize(this);
     }
 
     [Fact]

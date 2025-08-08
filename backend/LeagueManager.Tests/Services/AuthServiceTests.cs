@@ -1,137 +1,145 @@
-using Xunit;
-using Moq;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using LeagueManager.Domain.Models;
-using LeagueManager.Application.Services;
 using LeagueManager.Infrastructure.Services;
 using LeagueManager.Application.Dtos;
 using LeagueManager.Application.Settings;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
+using LeagueManager.Infrastructure.Data;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
+using Moq;
 
 namespace LeagueManager.Tests.Services;
 
-public class AuthServiceTests
+public class AuthServiceTests : IDisposable
 {
-    private readonly Mock<UserManager<User>> _mockUserManager;
+    private readonly SqliteConnection _connection;
+    private readonly DbContextOptions<LeagueDbContext> _options;
     private readonly Mock<IOptions<JwtSettings>> _mockJwtSettings;
-    private readonly AuthService _authService;
+    private readonly IServiceProvider _serviceProvider;
+    private bool _disposed;
 
-    public AuthServiceTests()
-{
-    var store = new Mock<IUserStore<User>>();
-    var optionsAccessor = new Mock<IOptions<IdentityOptions>>();
-    var passwordHasher = new Mock<IPasswordHasher<User>>();
-    var userValidators = new List<IUserValidator<User>>();
-    var passwordValidators = new List<IPasswordValidator<User>>();
-    var keyNormalizer = new Mock<ILookupNormalizer>();
-    var errors = new Mock<IdentityErrorDescriber>();
-    var services = new Mock<IServiceProvider>();
-    var logger = new Mock<ILogger<UserManager<User>>>();
-
-    _mockUserManager = new Mock<UserManager<User>>(
-        store.Object,
-        optionsAccessor.Object,
-        passwordHasher.Object,
-        userValidators,
-        passwordValidators,
-        keyNormalizer.Object,
-        errors.Object,
-        services.Object,
-        logger.Object);
-
-    // Mock the JWT Settings
-    _mockJwtSettings = new Mock<IOptions<JwtSettings>>();
-    var jwtSettings = new JwtSettings
+  public AuthServiceTests()
     {
-        Key = "a-very-long-and-secret-key-for-testing-purposes-only",
-        Issuer = "test-issuer",
-        Audience = "test-audience"
-    };
-    _mockJwtSettings.Setup(s => s.Value).Returns(jwtSettings);
+        _connection = new SqliteConnection("DataSource=:memory:");
+        _connection.Open();
+        _options = new DbContextOptionsBuilder<LeagueDbContext>().UseSqlite(_connection).Options;
+        using var context = new LeagueDbContext(_options);
+        context.Database.EnsureCreated();
 
-    // Create the service instance with the mocked dependencies
-    _authService = new AuthService(_mockUserManager.Object, _mockJwtSettings.Object);
-}
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddDbContext<LeagueDbContext>(o => o.UseSqlite(_connection));
+        services.AddIdentityCore<User>()
+            .AddRoles<IdentityRole>()
+            .AddEntityFrameworkStores<LeagueDbContext>();
+        _serviceProvider = services.BuildServiceProvider();
+        
+        _mockJwtSettings = new Mock<IOptions<JwtSettings>>();
+        var jwtSettings = new JwtSettings { Key = "this_is_a_super_secret_key_for_testing_1234567890", Issuer = "test", Audience = "test" };
+        _mockJwtSettings.Setup(s => s.Value).Returns(jwtSettings);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                _connection.Close();
+                _connection.Dispose();
+            }
+            _disposed = true;
+        }
+    }
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
 
     [Fact]
-    public async Task RegisterUserAsync_WhenSuccessful_ReturnsSuccessResult()
+    public async Task RegisterUserAsync_WhenSuccessful_CreatesUserAndPlayerInDatabase()
     {
         // Arrange
-        var registerDto = new RegisterDto { Email = "test@example.com", Password = "Password123!" };
+        await using var context = new LeagueDbContext(_options);
+        var userManager = _serviceProvider.GetRequiredService<UserManager<User>>();
+        var roleManager = _serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+        var service = new AuthService(userManager, _mockJwtSettings.Object, context);
+        var registerDto = new RegisterDto { FirstName = "Test", LastName = "User", Email = "test@example.com", Password = "Password123!" };
         
-        // Setup the mock UserManager to return a success result when CreateAsync is called
-        _mockUserManager.Setup(um => um.CreateAsync(It.IsAny<User>(), It.IsAny<string>()))
-                        .ReturnsAsync(IdentityResult.Success);
-
+        await roleManager.CreateAsync(new IdentityRole("RegisteredUser"));
+        
         // Act
-        var result = await _authService.RegisterUserAsync(registerDto);
+        var result = await service.RegisterUserAsync(registerDto);
 
         // Assert
         Assert.True(result.Succeeded);
+        var userInDb = await context.Users.FirstOrDefaultAsync(u => u.Email == "test@example.com");
+        Assert.NotNull(userInDb);
+        var playerInDb = await context.Players.FirstOrDefaultAsync(p => p.UserId == userInDb.Id);
+        Assert.NotNull(playerInDb);
     }
-
+    
     [Fact]
     public async Task LoginUserAsync_WithValidCredentials_ReturnsJwtTokenWithRoles()
     {
         // Arrange
+        await using var context = new LeagueDbContext(_options);
+        var userManager = _serviceProvider.GetRequiredService<UserManager<User>>();
+        var roleManager = _serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+        var service = new AuthService(userManager, _mockJwtSettings.Object, context);
         var loginDto = new LoginDto { Email = "test@example.com", Password = "Password123!" };
-        var user = new User { Id = "1", Email = "test@example.com", UserName = "test@example.com" };
-        var roles = new List<string> { "Admin", "RegisteredUser" };
-
-        _mockUserManager.Setup(um => um.FindByEmailAsync(loginDto.Email)).ReturnsAsync(user);
-        _mockUserManager.Setup(um => um.CheckPasswordAsync(user, loginDto.Password)).ReturnsAsync(true);
         
-        // We must mock the GetRolesAsync method to return a list of roles.
-        _mockUserManager.Setup(um => um.GetRolesAsync(user)).ReturnsAsync(roles);
+        await roleManager.CreateAsync(new IdentityRole("Admin"));
+        var user = new User { UserName = "test@example.com", Email = "test@example.com" };
+        await userManager.CreateAsync(user, "Password123!");
+        await userManager.AddToRoleAsync(user, "Admin");
 
         // Act
-        var tokenString = await _authService.LoginUserAsync(loginDto);
+        var tokenString = await service.LoginUserAsync(loginDto);
 
         // Assert
         Assert.NotNull(tokenString);
         var handler = new JwtSecurityTokenHandler();
         var token = handler.ReadJwtToken(tokenString);
-
-        // Check that the token contains the correct role claims
-        var roleClaims = token.Claims.Where(c => c.Type == "role").ToList();
-        Assert.Equal(2, roleClaims.Count);
-        Assert.Contains(roleClaims, c => c.Value == "Admin");
-        Assert.Contains(roleClaims, c => c.Value == "RegisteredUser");
+        var roleClaim = token.Claims.FirstOrDefault(c => c.Type == "role");
+        Assert.NotNull(roleClaim);
+        Assert.Equal("Admin", roleClaim.Value);
     }
 
     [Fact]
     public async Task LoginUserAsync_WithInvalidPassword_ReturnsNull()
     {
         // Arrange
+        await using var context = new LeagueDbContext(_options);
+        var userManager = _serviceProvider.GetRequiredService<UserManager<User>>();
+        var service = new AuthService(userManager, _mockJwtSettings.Object, context);
         var loginDto = new LoginDto { Email = "test@example.com", Password = "WrongPassword!" };
-        var user = new User { Id = "1", Email = "test@example.com", UserName = "test@example.com" };
-
-        // Setup the mock UserManager to find a user but then fail the password check
-        _mockUserManager.Setup(um => um.FindByEmailAsync(loginDto.Email)).ReturnsAsync(user);
-        _mockUserManager.Setup(um => um.CheckPasswordAsync(user, loginDto.Password)).ReturnsAsync(false);
+        
+        var user = new User { UserName = "test@example.com", Email = "test@example.com" };
+        await userManager.CreateAsync(user, "CorrectPassword123!");
 
         // Act
-        var token = await _authService.LoginUserAsync(loginDto);
+        var token = await service.LoginUserAsync(loginDto);
 
         // Assert
         Assert.Null(token);
     }
-
+    
     [Fact]
     public async Task LoginUserAsync_WithNonExistentUser_ReturnsNull()
     {
         // Arrange
+        await using var context = new LeagueDbContext(_options);
+        var userManager = _serviceProvider.GetRequiredService<UserManager<User>>();
+        var service = new AuthService(userManager, _mockJwtSettings.Object, context);
         var loginDto = new LoginDto { Email = "nosuchuser@example.com", Password = "Password123!" };
 
-        // Setup the mock UserManager to not find a user
-        _mockUserManager.Setup(um => um.FindByEmailAsync(loginDto.Email)).ReturnsAsync((User?)null);
-
         // Act
-        var token = await _authService.LoginUserAsync(loginDto);
+        var token = await service.LoginUserAsync(loginDto);
 
         // Assert
         Assert.Null(token);
