@@ -94,7 +94,7 @@ public class FixtureService : IFixtureService
         {
             HomeTeamId = fixtureDto.HomeTeamId,
             AwayTeamId = fixtureDto.AwayTeamId,
-            KickOffDateTime = fixtureDto.KickOffDateTime,
+            KickOffDateTime = fixtureDto.KickOffDateTime.ToUniversalTime(),
             LocationId = fixtureDto.LocationId,
             Status = FixtureStatus.Scheduled
         };

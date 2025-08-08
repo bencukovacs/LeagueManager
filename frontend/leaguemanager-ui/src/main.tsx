@@ -21,6 +21,7 @@ import MyFixturesPage from './pages/MyFixturesPage'
 import SubmitResultPage from './pages/SubmitResultPage'
 import JoinTeamPage from './pages/JoinTeamPage'
 import AdminManageLocationsPage from './pages/AdminManageLocationsPage'
+import AdminManageFixturesPage from './pages/AdminManageFixturesPage'
 
 const queryClient = new QueryClient()
 
@@ -59,6 +60,7 @@ const router = createBrowserRouter([
               { index: true, element: <AdminDashboardPage /> }, // /admin shows the dashboard
               { path: "teams", element: <AdminManageTeamsPage /> }, // /admin/teams shows the management page
               { path: "locations", element: <AdminManageLocationsPage /> },
+              { path: "fixtures", element: <AdminManageFixturesPage /> },
             ],
           },
         ],
