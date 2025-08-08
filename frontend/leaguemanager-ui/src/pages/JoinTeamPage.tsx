@@ -42,7 +42,7 @@ export default function JoinTeamPage() {
       
       <div className="space-y-3">
         {teams?.map((team) => (
-          <div key={team.id} className="p-4 border rounded-lg bg-white shadow-sm flex justify-between items-center">
+          <div key={team.id} className="p-4 border rounded-lg bg-sky-400 shadow-sm flex justify-between items-center">
             <div>
               <h2 className="text-xl font-bold">{team.name}</h2>
               <div className="flex items-center space-x-2 mt-1">

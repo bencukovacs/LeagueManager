@@ -50,7 +50,7 @@ export default function JoinRequestsList() {
       {requests && requests.length > 0 ? (
         <ul className="space-y-2">
           {requests.map((req) => (
-            <li key={req.id} className="flex justify-between items-center p-2 bg-gray-100 rounded">
+            <li key={req.id} className="flex justify-between items-center p-2 bg-sky-400 rounded">
               <span>{req.userName} has requested to join your team.</span>
               <div className="space-x-2">
                 <button

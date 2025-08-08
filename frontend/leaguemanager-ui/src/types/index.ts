@@ -60,3 +60,10 @@ export interface RosterRequestResponseDto {
   type: string;
   status: string;
 }
+
+export interface Location {
+  id: number;
+  name: string;
+  address: string | null;
+  pitchNumber: string | null;
+}
