@@ -62,7 +62,7 @@ builder.Services.AddSwaggerGen(options =>
                     Id = "Bearer"
                 }
             },
-            new string[]{}
+            Array.Empty<string>()
         }
     });
 });
@@ -99,17 +99,13 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-builder.Services.AddAuthorization(options =>
-{
-    options.AddPolicy("CanManageTeam", policy =>
-        policy.AddRequirements(new CanManageTeamRequirement()));
-
-    options.AddPolicy("CanUpdatePlayer", policy =>
-        policy.AddRequirements(new CanUpdatePlayerRequirement()));
-
-    options.AddPolicy("CanSubmitResult", policy =>
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy("CanManageTeam", policy =>
+        policy.AddRequirements(new CanManageTeamRequirement()))
+    .AddPolicy("CanUpdatePlayer", policy =>
+        policy.AddRequirements(new CanUpdatePlayerRequirement()))
+    .AddPolicy("CanSubmitResult", policy =>
         policy.AddRequirements(new CanSubmitResultRequirement()));
-});
 
 
 
@@ -161,24 +157,24 @@ using (var scope = app.Services.CreateScope())
         // Define a retry policy: try 5 times, waiting 5 seconds between each attempt.
         var retryPolicy = Policy
             .Handle<NpgsqlException>() // Only retry on a Postgres connection error
-            .WaitAndRetryAsync(5, retryAttempt => 
+            .WaitAndRetryAsync(5, RetryAttempt => 
             {
-                var timeToWait = TimeSpan.FromSeconds(Math.Pow(2, retryAttempt));
-                logger.LogWarning("Database connection failed. Waiting {timeToWait} before next retry. Attempt {retryAttempt}", timeToWait, retryAttempt);
-                return timeToWait;
+                var TimeToWait = TimeSpan.FromSeconds(Math.Pow(2, RetryAttempt));
+                logger.LogWarning("Database connection failed. Waiting {TimeToWait} before next retry. Attempt {RetryAttempt}", TimeToWait, RetryAttempt);
+                return TimeToWait;
             });
 
         // Execute the migration and seeding within the retry policy
         await retryPolicy.ExecuteAsync(async () =>
         {
-            logger.LogInformation("Applying database migrations...");
+            logger.LogInformation("Starting database setup (migrations and seeding)...");
+            
             var dbContext = services.GetRequiredService<LeagueDbContext>();
             await dbContext.Database.MigrateAsync();
-            logger.LogInformation("Database migrations applied successfully.");
-
-            logger.LogInformation("Seeding database...");
+            
             await DbSeeder.SeedRolesAndAdminAsync(services);
-            logger.LogInformation("Database seeding completed.");
+            
+            logger.LogInformation("Database setup completed successfully.");
         });
     }
     catch (Exception ex)
