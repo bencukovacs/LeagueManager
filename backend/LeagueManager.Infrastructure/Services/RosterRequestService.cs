@@ -36,10 +36,16 @@ public class RosterRequestService : IRosterRequestService
       throw new InvalidOperationException("You can only request to join approved teams.");
     }
 
-    var existingRequest = await _context.RosterRequests.AnyAsync(r => r.UserId == currentUserId && r.TeamId == teamId && r.Status == RosterRequestStatus.PendingLeaderApproval);
+    // Check if a pending request from this user to this team already exists.
+    var existingRequest = await _context.RosterRequests.AnyAsync(r => 
+        r.UserId == currentUserId && 
+        r.TeamId == teamId && 
+        r.Status == RosterRequestStatus.PendingLeaderApproval);
+
     if (existingRequest)
     {
-      throw new InvalidOperationException("You already have a pending request to join this team.");
+        // If it exists, throw an error.
+        throw new InvalidOperationException("You already have a pending request to join this team.");
     }
 
     var request = new RosterRequest

@@ -3,6 +3,11 @@ import apiClient from '../../api/apiClient';
 import type { PlayerResponseDto } from '../../types';
 import { useState } from 'react';
 
+// Add Player
+const addPlayer = async ({ teamId, name }: { teamId: number; name: string }) => {
+  await apiClient.post('/players', { name, teamId });
+};
+
 // "Soft delete" for Team Leaders
 const removePlayerFromRoster = async (playerId: number) => {
   await apiClient.patch(`/players/${playerId}/remove-from-roster`);
@@ -20,12 +25,27 @@ interface RosterManagementProps {
   isAdmin: boolean; // New prop
 }
 
-export default function RosterManagement({ teamId, roster, isLoading, isAdmin }: RosterManagementProps) {
+export default function RosterManagement({
+  teamId,
+  roster,
+  isLoading,
+  isAdmin
+}: RosterManagementProps) {
   const queryClient = useQueryClient();
   const [newPlayerName, setNewPlayerName] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  const addPlayerMutation = useMutation({ /* ... unchanged ... */ });
+  const addPlayerMutation = useMutation({
+    mutationFn: addPlayer,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['roster'] });
+      setNewPlayerName('');
+      setError(null);
+    },
+    onError: (err: any) => {
+      setError(err.response?.data?.message || 'Failed to add player.');
+    }
+  });
 
   const removePlayerMutation = useMutation({
     mutationFn: removePlayerFromRoster,
@@ -37,7 +57,6 @@ export default function RosterManagement({ teamId, roster, isLoading, isAdmin }:
     }
   });
 
-  // New mutation for permanent deletion
   const deletePlayerMutation = useMutation({
     mutationFn: deletePlayerPermanently,
     onSuccess: () => {
@@ -48,16 +67,34 @@ export default function RosterManagement({ teamId, roster, isLoading, isAdmin }:
     }
   });
 
-  const handleSubmit = (e: React.FormEvent) => { /* ... unchanged ... */ };
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPlayerName.trim()) return;
+    addPlayerMutation.mutate({ teamId, name: newPlayerName });
+  };
 
   return (
     <div className="mt-6 p-4 border rounded-lg">
       <h3 className="text-xl font-semibold mb-4">Manage Roster</h3>
-      
-      {/* Add Player Form (unchanged) */}
+
+      {/* Add Player Form */}
       <form onSubmit={handleSubmit} className="flex gap-2 mb-4">
-        {/* ... */}
+        <input
+          type="text"
+          value={newPlayerName}
+          onChange={(e) => setNewPlayerName(e.target.value)}
+          placeholder="New player name"
+          className="flex-grow px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+        />
+        <button
+          type="submit"
+          disabled={addPlayerMutation.isPending}
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-400"
+        >
+          Add Player
+        </button>
       </form>
+
       {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
 
       {isLoading ? (
@@ -65,9 +102,12 @@ export default function RosterManagement({ teamId, roster, isLoading, isAdmin }:
       ) : (
         <ul className="space-y-2">
           {roster.map((player) => (
-            <li key={player.id} className="flex justify-between items-center p-2 bg-sky-400 rounded">
+            <li
+              key={player.id}
+              className="flex justify-between items-center p-2 bg-sky-400 rounded"
+            >
               <span>{player.name}</span>
-              
+
               {/* --- CONDITIONAL BUTTON RENDERING --- */}
               <div className="flex space-x-2">
                 {isAdmin ? (
