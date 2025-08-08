@@ -64,7 +64,7 @@ public class PlayerService : IPlayerService
         var currentUserId = currentUser.FindFirstValue(ClaimTypes.NameIdentifier)
             ?? throw new UnauthorizedAccessException("User is not authenticated.");
 
-        var team = await _context.Teams.FindAsync(playerDto.TeamId)
+        _ = await _context.Teams.FindAsync(playerDto.TeamId)
             ?? throw new ArgumentException("Invalid Team ID.");
 
         var isManager = await _context.TeamMemberships.AnyAsync(m => 

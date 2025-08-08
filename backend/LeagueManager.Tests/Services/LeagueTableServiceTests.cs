@@ -1,5 +1,3 @@
-using Moq;
-using AutoMapper;
 using LeagueManager.Infrastructure.Data;
 using LeagueManager.Domain.Models;
 using LeagueManager.Infrastructure.Services;
@@ -12,7 +10,7 @@ public class LeagueTableServiceTests : IDisposable
 {
     private readonly SqliteConnection _connection;
     private readonly DbContextOptions<LeagueDbContext> _options;
-    private readonly Mock<IMapper> _mockMapper;
+    private bool _disposed;
 
     public LeagueTableServiceTests()
     {
@@ -21,7 +19,6 @@ public class LeagueTableServiceTests : IDisposable
         _options = new DbContextOptionsBuilder<LeagueDbContext>()
             .UseSqlite(_connection)
             .Options;
-        _mockMapper = new Mock<IMapper>();
 
         using var context = new LeagueDbContext(_options);
         context.Database.EnsureCreated();
@@ -29,10 +26,22 @@ public class LeagueTableServiceTests : IDisposable
 
     private LeagueDbContext GetDbContext() => new LeagueDbContext(_options);
 
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                _connection.Close();
+                _connection.Dispose();
+            }
+            _disposed = true;
+        }
+    }
     public void Dispose()
     {
-        _connection.Close();
-        _connection.Dispose();
+        Dispose(true);
+        GC.SuppressFinalize(this);
     }
 
     [Fact]
@@ -56,7 +65,7 @@ public class LeagueTableServiceTests : IDisposable
         
         await context.SaveChangesAsync();
 
-        var service = new LeagueTableService(context, _mockMapper.Object);
+        var service = new LeagueTableService(context);
 
         // --- ACT ---
         var table = (await service.GetLeagueTableAsync()).ToList();
@@ -81,14 +90,14 @@ public class LeagueTableServiceTests : IDisposable
         context.Teams.Add(teamA);
         await context.SaveChangesAsync();
         
-        var service = new LeagueTableService(context, _mockMapper.Object);
+        var service = new LeagueTableService(context);
 
         // --- ACT ---
         var table = (await service.GetLeagueTableAsync()).ToList();
 
         // --- ASSERT ---
         Assert.Single(table);
-        var stats = table.First();
+        var stats = table[0];
         Assert.Equal(0, stats.Played);
         Assert.Equal(0, stats.Points);
     }
@@ -111,7 +120,7 @@ public class LeagueTableServiceTests : IDisposable
         
         await context.SaveChangesAsync();
 
-        var service = new LeagueTableService(context, _mockMapper.Object);
+        var service = new LeagueTableService(context);
 
         // --- ACT ---
         var table = (await service.GetLeagueTableAsync()).ToList();
@@ -143,7 +152,7 @@ public class LeagueTableServiceTests : IDisposable
         
         await context.SaveChangesAsync();
         
-        var service = new LeagueTableService(context, _mockMapper.Object);
+        var service = new LeagueTableService(context);
 
         // --- ACT ---
         var table = (await service.GetLeagueTableAsync()).ToList();

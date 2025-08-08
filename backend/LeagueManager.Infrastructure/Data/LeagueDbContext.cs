@@ -15,38 +15,38 @@ public class LeagueDbContext : IdentityDbContext<User>
     public DbSet<Result> Results { get; set; }
     public DbSet<Goal> Goals { get; set; }
     public DbSet<TeamMembership> TeamMemberships { get; set; }
-    public DbSet<MOMVote> MOMVotes { get; set; }
+    public DbSet<MomVote> MOMVotes { get; set; }
     public DbSet<LeagueConfiguration> LeagueConfigurations { get; set; }
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    protected override void OnModelCreating(ModelBuilder builder)
     {
-        base.OnModelCreating(modelBuilder);
+        base.OnModelCreating(builder);
 
-        modelBuilder.Entity<Fixture>()
+        builder.Entity<Fixture>()
             .HasOne(f => f.HomeTeam)
             .WithMany()
             .HasForeignKey(f => f.HomeTeamId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        modelBuilder.Entity<Fixture>()
+        builder.Entity<Fixture>()
             .HasOne(f => f.AwayTeam)
             .WithMany()
             .HasForeignKey(f => f.AwayTeamId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        modelBuilder.Entity<MOMVote>()
+        builder.Entity<MomVote>()
             .HasOne(v => v.VotingTeam)
             .WithMany()
             .HasForeignKey(v => v.VotingTeamId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        modelBuilder.Entity<MOMVote>()
+        builder.Entity<MomVote>()
             .HasOne(v => v.VotedForOwnPlayer)
             .WithMany()
             .HasForeignKey(v => v.VotedForOwnPlayerId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        modelBuilder.Entity<MOMVote>()
+        builder.Entity<MomVote>()
             .HasOne(v => v.VotedForOpponentPlayer)
             .WithMany()
             .HasForeignKey(v => v.VotedForOpponentPlayerId)

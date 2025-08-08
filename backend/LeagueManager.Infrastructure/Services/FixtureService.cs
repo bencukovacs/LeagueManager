@@ -7,7 +7,6 @@ using LeagueManager.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
-using Microsoft.AspNetCore.Authorization;
 
 namespace LeagueManager.Infrastructure.Services;
 
@@ -32,29 +31,32 @@ public class FixtureService : IFixtureService
     }
 
     public async Task<FixtureResponseDto?> GetFixtureByIdAsync(int id)
-{
-    // We can't use ProjectTo here because the roster logic is too complex for it to figure out.
-    // We'll fetch the full entity and then map it.
-    var fixture = await _context.Fixtures
-        .Include(f => f.HomeTeam).ThenInclude(t => t.Players) // Include players for the home team
-        .Include(f => f.AwayTeam).ThenInclude(t => t.Players) // Include players for the away team
-        .Include(f => f.Location)
-        .Include(f => f.Result)
-        .AsNoTracking()
-        .FirstOrDefaultAsync(f => f.Id == id);
+    {
+        // We can't use ProjectTo here because the roster logic is too complex for it to figure out.
+        // We'll fetch the full entity and then map it.
+        var fixture = await _context.Fixtures
+            .Include(f => f.HomeTeam).ThenInclude(t => t.Players)
+            .Include(f => f.AwayTeam).ThenInclude(t => t.Players)
+            .Include(f => f.Location)
+            .Include(f => f.Result)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(f => f.Id == id);
 
-    if (fixture == null) return null;
+        if (fixture == null) return null;
 
-    var fixtureDto = _mapper.Map<FixtureResponseDto>(fixture);
-    
-    // Manually map the rosters
-    fixtureDto.HomeTeamRoster = _mapper.Map<List<PlayerResponseDto>>(fixture.HomeTeam.Players);
-    fixtureDto.AwayTeamRoster = _mapper.Map<List<PlayerResponseDto>>(fixture.AwayTeam.Players);
+        if (fixture.HomeTeam == null) return null;
+        if (fixture.AwayTeam == null) return null;
 
-    return fixtureDto;
-}
+        var fixtureDto = _mapper.Map<FixtureResponseDto>(fixture);
 
-        public async Task<IEnumerable<MomVoteResponseDto>> GetMomVotesForFixtureAsync(int fixtureId)
+        // Manually map the rosters
+        fixtureDto.HomeTeamRoster = _mapper.Map<List<PlayerResponseDto>>(fixture.HomeTeam.Players);
+        fixtureDto.AwayTeamRoster = _mapper.Map<List<PlayerResponseDto>>(fixture.AwayTeam.Players);
+
+        return fixtureDto;
+    }
+
+    public async Task<IEnumerable<MomVoteResponseDto>> GetMomVotesForFixtureAsync(int fixtureId)
     {
         var votes = await _context.MOMVotes
             .Where(v => v.FixtureId == fixtureId)
@@ -140,67 +142,114 @@ public class FixtureService : IFixtureService
         await _context.SaveChangesAsync();
         return true;
     }
-
+    
     public async Task<ResultResponseDto> SubmitResultAsync(int fixtureId, SubmitResultDto resultDto)
     {
-        var fixture = await _context.Fixtures.FindAsync(fixtureId)
+        var fixture = await GetFixtureAsync(fixtureId);
+        var currentUserId = GetCurrentUserId();
+
+        await EnsureNoExistingResultAsync(fixtureId);
+        ValidateGoalCount(resultDto);
+        await ValidateGoalscorersAsync(resultDto, fixture);
+
+        if (resultDto.MomVote != null)
+        {
+            await ValidateMomVoteAsync(resultDto, fixture, currentUserId);
+        }
+
+        await using var transaction = await _context.Database.BeginTransactionAsync();
+
+        var result = await CreateResultAsync(fixtureId, resultDto);
+        fixture.Status = FixtureStatus.Completed;
+        _context.Fixtures.Update(fixture);
+
+        await AddGoalsAsync(resultDto, fixtureId);
+
+        if (resultDto.MomVote != null)
+        {
+            await AddMomVoteAsync(resultDto, fixtureId, currentUserId);
+        }
+
+        await _context.SaveChangesAsync();
+        await transaction.CommitAsync();
+
+        return _mapper.Map<ResultResponseDto>(result);
+    }
+
+
+    private async Task<Fixture> GetFixtureAsync(int fixtureId)
+    {
+        return await _context.Fixtures.FindAsync(fixtureId)
             ?? throw new KeyNotFoundException("Fixture not found.");
+    }
 
-        var currentUserId = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier)
+    private string GetCurrentUserId()
+    {
+        return _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier)
             ?? throw new UnauthorizedAccessException("User is not authenticated.");
+    }
 
-
+    private async Task EnsureNoExistingResultAsync(int fixtureId)
+    {
         if (await _context.Results.AnyAsync(r => r.FixtureId == fixtureId))
         {
             throw new InvalidOperationException("A result for this fixture has already been submitted.");
         }
+    }
 
+    private static void ValidateGoalCount(SubmitResultDto resultDto)
+    {
         var totalGoals = resultDto.Goalscorers.Count;
         if (totalGoals != resultDto.HomeScore + resultDto.AwayScore)
         {
             throw new InvalidOperationException("The number of goalscorers does not match the total score.");
         }
+    }
 
+    private async Task ValidateGoalscorersAsync(SubmitResultDto resultDto, Fixture fixture)
+    {
         var playerIds = resultDto.Goalscorers.Select(g => g.PlayerId).ToList();
-        if (playerIds.Any())
-        {
-            var validPlayersCount = await _context.Players
-                .CountAsync(p => playerIds.Contains(p.Id) && (p.TeamId == fixture.HomeTeamId || p.TeamId == fixture.AwayTeamId));
+        if (!playerIds.Any()) return;
 
-            if (validPlayersCount != playerIds.Count)
-            {
-                throw new InvalidOperationException("One or more goalscorer IDs are invalid or do not belong to the competing teams.");
-            }
+        var validPlayersCount = await _context.Players
+            .CountAsync(p => playerIds.Contains(p.Id) &&
+                            (p.TeamId == fixture.HomeTeamId || p.TeamId == fixture.AwayTeamId));
+
+        if (validPlayersCount != playerIds.Count)
+        {
+            throw new InvalidOperationException("One or more goalscorer IDs are invalid or do not belong to the competing teams.");
+        }
+    }
+
+    private async Task ValidateMomVoteAsync(SubmitResultDto resultDto, Fixture fixture, string currentUserId)
+    {
+        var userMembership = await _context.TeamMemberships.FirstOrDefaultAsync(m =>
+            (m.TeamId == fixture.HomeTeamId || m.TeamId == fixture.AwayTeamId) &&
+            m.UserId == currentUserId &&
+            (m.Role == TeamRole.Leader || m.Role == TeamRole.AssistantLeader));
+
+        if (userMembership == null)
+        {
+            throw new UnauthorizedAccessException("User is not a manager of either team in this fixture.");
         }
 
-        if (resultDto.MomVote != null)
+        var votingTeamId = userMembership.TeamId;
+        var opposingTeamId = votingTeamId == fixture.HomeTeamId ? fixture.AwayTeamId : fixture.HomeTeamId;
+
+        var ownPlayerIsValid = await _context.Players.AnyAsync(p =>
+            p.Id == resultDto.MomVote!.VotedForOwnPlayerId && p.TeamId == votingTeamId);
+
+        var opponentPlayerIsValid = await _context.Players.AnyAsync(p =>
+            p.Id == resultDto.MomVote!.VotedForOpponentPlayerId && p.TeamId == opposingTeamId);
+
+        if (!ownPlayerIsValid || !opponentPlayerIsValid)
         {
-            // Find which team the current user is a manager of for this fixture
-            var userMembership = await _context.TeamMemberships.FirstOrDefaultAsync(m =>
-                (m.TeamId == fixture.HomeTeamId || m.TeamId == fixture.AwayTeamId) &&
-                m.UserId == currentUserId &&
-                (m.Role == TeamRole.Leader || m.Role == TeamRole.AssistantLeader));
-
-            if (userMembership == null)
-            {
-                throw new UnauthorizedAccessException("User is not a manager of either team in this fixture.");
-            }
-
-            var votingTeamId = userMembership.TeamId;
-            var opposingTeamId = votingTeamId == fixture.HomeTeamId ? fixture.AwayTeamId : fixture.HomeTeamId;
-
-            // Validate that the voted-for players belong to the correct teams
-            var ownPlayerIsValid = await _context.Players.AnyAsync(p => p.Id == resultDto.MomVote.VotedForOwnPlayerId && p.TeamId == votingTeamId);
-            var opponentPlayerIsValid = await _context.Players.AnyAsync(p => p.Id == resultDto.MomVote.VotedForOpponentPlayerId && p.TeamId == opposingTeamId);
-
-            if (!ownPlayerIsValid || !opponentPlayerIsValid)
-            {
-                throw new ArgumentException("Invalid player ID in MOM vote. Ensure players belong to the correct teams.");
-            }
+            throw new ArgumentException("Invalid player ID in MOM vote. Ensure players belong to the correct teams.");
         }
+    }
 
-        await using var transaction = await _context.Database.BeginTransactionAsync();
-
+    private async Task<Result> CreateResultAsync(int fixtureId, SubmitResultDto resultDto)
+    {
         var result = new Result
         {
             FixtureId = fixtureId,
@@ -209,36 +258,34 @@ public class FixtureService : IFixtureService
             Status = ResultStatus.PendingApproval
         };
         _context.Results.Add(result);
+        await Task.CompletedTask; // keeps async signature consistent if later expanded
+        return result;
+    }
 
-        fixture.Status = FixtureStatus.Completed;
-        _context.Fixtures.Update(fixture);
-
+    private async Task AddGoalsAsync(SubmitResultDto resultDto, int fixtureId)
+    {
         foreach (var goalscorer in resultDto.Goalscorers)
         {
-            var goal = new Goal
+            _context.Goals.Add(new Goal
             {
                 PlayerId = goalscorer.PlayerId,
                 FixtureId = fixtureId
-            };
-            _context.Goals.Add(goal);
+            });
         }
-
-        if (resultDto.MomVote != null)
-        {
-            var votingTeamId = _context.TeamMemberships.First(m => m.UserId == currentUserId).TeamId;
-            var momVote = new MOMVote
-            {
-                FixtureId = fixtureId,
-                VotingTeamId = votingTeamId,
-                VotedForOwnPlayerId = resultDto.MomVote.VotedForOwnPlayerId,
-                VotedForOpponentPlayerId = resultDto.MomVote.VotedForOpponentPlayerId
-            };
-            _context.MOMVotes.Add(momVote);
-        }
-
-        await _context.SaveChangesAsync();
-        await transaction.CommitAsync();
-
-        return _mapper.Map<ResultResponseDto>(result);
+        await Task.CompletedTask;
     }
+
+    private async Task AddMomVoteAsync(SubmitResultDto resultDto, int fixtureId, string currentUserId)
+    {
+        var votingTeam = await _context.TeamMemberships.FirstAsync(m => m.UserId == currentUserId);
+        var momVote = new MomVote
+        {
+            FixtureId = fixtureId,
+            VotingTeamId = votingTeam.Id,
+            VotedForOwnPlayerId = resultDto.MomVote!.VotedForOwnPlayerId,
+            VotedForOpponentPlayerId = resultDto.MomVote.VotedForOpponentPlayerId
+        };
+        _context.MOMVotes.Add(momVote);
+    }
+
 }

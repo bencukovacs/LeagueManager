@@ -17,6 +17,7 @@ public class TeamServiceTests : IDisposable
     private readonly SqliteConnection _connection;
     private readonly DbContextOptions<LeagueDbContext> _options;
     private readonly IMapper _mapper;
+    private bool _disposed;
 
     public TeamServiceTests()
     {
@@ -35,10 +36,23 @@ public class TeamServiceTests : IDisposable
 
     private LeagueDbContext GetDbContext() => new LeagueDbContext(_options);
 
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                _connection.Close();
+                _connection.Dispose();
+            }
+            _disposed = true;
+        }
+    }
     public void Dispose()
     {
-        _connection.Close();
-        _connection.Dispose();
+        Dispose(true);
+        GC.SuppressFinalize(this);
     }
 
     private Mock<IHttpContextAccessor> CreateMockHttpContextAccessor(string? userId)
@@ -57,8 +71,6 @@ public class TeamServiceTests : IDisposable
         }
         return mockHttpContextAccessor;
     }
-
-    // ... (Your other TeamService tests like CreateTeamAsync and ApproveTeamAsync remain here) ...
 
     [Fact]
     public async Task GetMyTeamAsync_WhenUserIsTeamLeader_ReturnsCorrectTeamAndRole()

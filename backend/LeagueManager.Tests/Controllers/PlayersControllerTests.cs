@@ -1,16 +1,12 @@
-using Xunit;
 using Moq;
 using LeagueManager.API.Controllers;
 using LeagueManager.Application.Services;
 using LeagueManager.Application.Dtos;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using System;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using LeagueManager.Domain.Models;
-using System.Collections.Generic;
 
 namespace LeagueManager.Tests.Controllers;
 

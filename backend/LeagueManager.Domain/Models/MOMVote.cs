@@ -1,6 +1,6 @@
 namespace LeagueManager.Domain.Models;
 
-public class MOMVote
+public class MomVote
 {
     public int Id { get; set; }
 

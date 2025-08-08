@@ -1,4 +1,3 @@
-using AutoMapper;
 using LeagueManager.Application.Dtos;
 using LeagueManager.Application.Services;
 using LeagueManager.Domain.Models;
@@ -10,12 +9,10 @@ namespace LeagueManager.Infrastructure.Services;
 public class LeagueTableService : ILeagueTableService
 {
     private readonly LeagueDbContext _context;
-    private readonly IMapper _mapper;
 
-    public LeagueTableService(LeagueDbContext context, IMapper mapper)
+    public LeagueTableService(LeagueDbContext context)
     {
         _context = context;
-        _mapper = mapper;
     }
 
     public async Task<IEnumerable<TeamStatsDto>> GetLeagueTableAsync()

@@ -28,7 +28,7 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()));
 
 
-        CreateMap<MOMVote, MomVoteResponseDto>()
+        CreateMap<MomVote, MomVoteResponseDto>()
             .ForMember(dest => dest.VotingTeamName, opt => opt.MapFrom(src => src.VotingTeam != null ? src.VotingTeam.Name : string.Empty))
             .ForMember(dest => dest.VotedForOwnPlayerName, opt => opt.MapFrom(src => src.VotedForOwnPlayer != null ? src.VotedForOwnPlayer.Name : string.Empty))
             .ForMember(dest => dest.VotedForOpponentPlayerName, opt => opt.MapFrom(src => src.VotedForOpponentPlayer != null ? src.VotedForOpponentPlayer.Name : string.Empty));
