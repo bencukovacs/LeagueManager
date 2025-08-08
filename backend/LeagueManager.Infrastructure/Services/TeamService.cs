@@ -87,6 +87,13 @@ public class TeamService : ITeamService
             Role = TeamRole.Leader
         };
         _context.TeamMemberships.Add(membership);
+
+        var playerProfile = await _context.Players.FirstOrDefaultAsync(p => p.UserId == currentUserId);
+        if (playerProfile != null)
+        {
+            playerProfile.TeamId = team.Id;
+        }
+
         await _context.SaveChangesAsync();
 
         return _mapper.Map<TeamResponseDto>(team);
