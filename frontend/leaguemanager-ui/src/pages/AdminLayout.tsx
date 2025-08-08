@@ -26,6 +26,9 @@ export default function AdminLayout() {
           <NavLink to="/admin/fixtures" className={getNavLinkClass}>
             Manage Fixtures
           </NavLink>
+          <NavLink to="/admin/players" className={getNavLinkClass}>
+            Manage Players
+          </NavLink>
           {/* We can add more tabs here later */}
         </nav>
       </div>

@@ -57,9 +57,9 @@ public class PlayerService : IPlayerService
         return _mapper.Map<PlayerResponseDto>(player);
     }
 
-     public async Task<PlayerResponseDto> CreatePlayerAsync(PlayerDto playerDto)
+    public async Task<PlayerResponseDto> CreatePlayerAsync(PlayerDto playerDto)
     {
-        var currentUser = _httpContextAccessor.HttpContext?.User 
+        var currentUser = _httpContextAccessor.HttpContext?.User
             ?? throw new UnauthorizedAccessException("User context is not available.");
         var currentUserId = currentUser.FindFirstValue(ClaimTypes.NameIdentifier)
             ?? throw new UnauthorizedAccessException("User is not authenticated.");
@@ -67,10 +67,10 @@ public class PlayerService : IPlayerService
         _ = await _context.Teams.FindAsync(playerDto.TeamId)
             ?? throw new ArgumentException("Invalid Team ID.");
 
-        var isManager = await _context.TeamMemberships.AnyAsync(m => 
+        var isManager = await _context.TeamMemberships.AnyAsync(m =>
             m.TeamId == playerDto.TeamId && m.UserId == currentUserId &&
             (m.Role == TeamRole.Leader || m.Role == TeamRole.AssistantLeader));
-        
+
         var isAdmin = currentUser.IsInRole("Admin");
 
         var player = _mapper.Map<Player>(playerDto);
@@ -81,7 +81,7 @@ public class PlayerService : IPlayerService
             // The player's UserId should be null. This is correct.
         }
         // SCENARIO 2: A regular user is creating their own player profile.
-        else 
+        else
         {
             // Business Rule: A user can only have one player profile.
             var userAlreadyHasPlayerProfile = await _context.Players.AnyAsync(p => p.UserId == currentUserId);
@@ -100,36 +100,24 @@ public class PlayerService : IPlayerService
                ?? throw new InvalidOperationException("Could not retrieve created player.");
     }
 
-    // This method now contains the complex deletion logic
-    public async Task DeletePlayerAsync(int id)
+    public async Task RemovePlayerFromRosterAsync(int id)
     {
         var player = await _context.Players.FindAsync(id)
             ?? throw new KeyNotFoundException("Player not found.");
 
-        var currentUserId = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier);
-        var currentUserIsAdmin = _httpContextAccessor.HttpContext?.User.IsInRole("Admin") ?? false;
+        // This action only removes the player from a team.
+        player.TeamId = null;
+        await _context.SaveChangesAsync();
+    }
 
-        if (currentUserIsAdmin)
-        {
-            _context.Players.Remove(player);
-            await _context.SaveChangesAsync();
-            return;
-        }
+    public async Task DeletePlayerPermanentlyAsync(int id)
+    {
+        var player = await _context.Players.FindAsync(id)
+            ?? throw new KeyNotFoundException("Player not found.");
 
-        var isTeamManager = await _context.TeamMemberships
-            .AnyAsync(m => m.TeamId == player.TeamId && m.UserId == currentUserId &&
-                           (m.Role == TeamRole.Leader || m.Role == TeamRole.AssistantLeader));
-
-        // Allow deletion only if the player is unlinked AND the user is a team manager.
-        if (player.UserId == null && isTeamManager)
-        {
-            _context.Players.Remove(player);
-            await _context.SaveChangesAsync();
-            return;
-        }
-
-        // If neither of the above conditions are met, the user is not authorized.
-        throw new UnauthorizedAccessException("User is not authorized to delete this player.");
+        // This action permanently removes the player.
+        _context.Players.Remove(player);
+        await _context.SaveChangesAsync();
     }
 
     public async Task<Player?> GetDomainPlayerByIdAsync(int id)
@@ -141,12 +129,36 @@ public class PlayerService : IPlayerService
             .Include(p => p.User)
             .FirstOrDefaultAsync(p => p.Id == id);
     }
-    
+
     public async Task<IEnumerable<PlayerResponseDto>> GetPlayersForTeamAsync(int teamId)
     {
         return await _context.Players
             .Where(p => p.TeamId == teamId)
             .ProjectTo<PlayerResponseDto>(_mapper.ConfigurationProvider)
             .ToListAsync();
+    }
+
+    public async Task<IEnumerable<PlayerResponseDto>> GetUnassignedPlayersAsync()
+    {
+        return await _context.Players
+            .Where(p => p.TeamId == null)
+            .ProjectTo<PlayerResponseDto>(_mapper.ConfigurationProvider)
+            .ToListAsync();
+    }
+    
+    public async Task<PlayerResponseDto?> AssignPlayerToTeamAsync(int playerId, int teamId)
+    {
+        var player = await _context.Players.FindAsync(playerId);
+        var teamExists = await _context.Teams.AnyAsync(t => t.Id == teamId && t.Status == TeamStatus.Approved);
+
+        if (player == null || !teamExists)
+        {
+            return null; // Or throw an exception if you prefer
+        }
+
+        player.TeamId = teamId;
+        await _context.SaveChangesAsync();
+
+        return await GetPlayerByIdAsync(playerId);
     }
 }

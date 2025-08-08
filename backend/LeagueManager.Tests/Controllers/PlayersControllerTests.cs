@@ -132,27 +132,75 @@ public class PlayersControllerTests
     }
 
     [Fact]
-    public async Task DeletePlayer_WhenServiceSucceeds_ReturnsNoContent()
+    public async Task RemovePlayerFromRoster_WhenAuthorized_ReturnsNoContent()
     {
         // Arrange
-        _mockPlayerService.Setup(s => s.DeletePlayerAsync(1)).Returns(Task.CompletedTask);
+        var playerDto = new PlayerResponseDto { Id = 1, Name = "Test Player", TeamId = 1, TeamName = "Team A" };
+        _mockPlayerService.Setup(s => s.GetPlayerByIdAsync(1)).ReturnsAsync(playerDto);
+        _mockAuthorizationService
+            .Setup(s => s.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), "CanManageTeam"))
+            .ReturnsAsync(AuthorizationResult.Success());
+        _mockPlayerService.Setup(s => s.RemovePlayerFromRosterAsync(1)).Returns(Task.CompletedTask);
 
         // Act
-        var result = await _controller.DeletePlayer(1);
+        var result = await _controller.RemovePlayerFromRoster(1);
 
         // Assert
         Assert.IsType<NoContentResult>(result);
     }
 
     [Fact]
-    public async Task DeletePlayer_WhenPlayerNotFound_ReturnsNotFound()
+    public async Task RemovePlayerFromRoster_WhenPlayerNotFound_ReturnsNotFound()
     {
         // Arrange
-        _mockPlayerService.Setup(s => s.DeletePlayerAsync(99))
+        _mockPlayerService.Setup(s => s.GetPlayerByIdAsync(99)).ReturnsAsync((PlayerResponseDto?)null);
+
+        // Act
+        var result = await _controller.RemovePlayerFromRoster(99);
+
+        // Assert
+        Assert.IsType<NotFoundResult>(result);
+    }
+
+    [Fact]
+    public async Task RemovePlayerFromRoster_WhenUnauthorized_ReturnsForbid()
+    {
+        // Arrange
+        var playerDto = new PlayerResponseDto { Id = 1, Name = "Test Player", TeamId = 1, TeamName = "Team A" };
+        _mockPlayerService.Setup(s => s.GetPlayerByIdAsync(1)).ReturnsAsync(playerDto);
+        _mockAuthorizationService
+            .Setup(s => s.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), "CanManageTeam"))
+            .ReturnsAsync(AuthorizationResult.Failed());
+
+        // Act
+        var result = await _controller.RemovePlayerFromRoster(1);
+
+        // Assert
+        Assert.IsType<ForbidResult>(result);
+    }
+
+    [Fact]
+    public async Task DeletePlayerPermanently_WhenSuccessful_ReturnsNoContent()
+    {
+        // Arrange
+        _mockPlayerService.Setup(s => s.DeletePlayerPermanentlyAsync(1)).Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _controller.DeletePlayerPermanently(1);
+
+        // Assert
+        Assert.IsType<NoContentResult>(result);
+    }
+
+    [Fact]
+    public async Task DeletePlayerPermanently_WhenPlayerNotFound_ReturnsNotFound()
+    {
+        // Arrange
+        _mockPlayerService.Setup(s => s.DeletePlayerPermanentlyAsync(99))
             .ThrowsAsync(new KeyNotFoundException("Player not found."));
 
         // Act
-        var result = await _controller.DeletePlayer(99);
+        var result = await _controller.DeletePlayerPermanently(99);
 
         // Assert
         var notFoundResult = Assert.IsType<NotFoundObjectResult>(result);
@@ -160,19 +208,52 @@ public class PlayersControllerTests
     }
 
     [Fact]
-    public async Task DeletePlayer_WhenUnauthorized_ReturnsForbidden()
+    public async Task GetUnassignedPlayers_ReturnsOkResult_WithUnassignedPlayers()
     {
         // Arrange
-        _mockPlayerService.Setup(s => s.DeletePlayerAsync(1))
-            .ThrowsAsync(new UnauthorizedAccessException("Not authorized."));
+        var unassignedPlayers = new List<PlayerResponseDto>
+        {
+            new() { Id = 1, Name = "Free Agent 1", TeamId = 0, TeamName = "" },
+            new() { Id = 2, Name = "Free Agent 2", TeamId = 0, TeamName = "" }
+        };
+        _mockPlayerService.Setup(s => s.GetUnassignedPlayersAsync()).ReturnsAsync(unassignedPlayers);
 
         // Act
-        var result = await _controller.DeletePlayer(1);
+        var result = await _controller.GetUnassignedPlayers();
 
         // Assert
-        var objectResult = Assert.IsType<ObjectResult>(result);
-        Assert.Equal(StatusCodes.Status403Forbidden, objectResult.StatusCode);
-        Assert.NotNull(objectResult.Value);
-        Assert.Equal("Not authorized.", objectResult.Value.GetType().GetProperty("Message")?.GetValue(objectResult.Value, null));
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var returnedPlayers = Assert.IsAssignableFrom<IEnumerable<PlayerResponseDto>>(okResult.Value);
+        Assert.Equal(2, returnedPlayers.Count());
+    }
+
+    [Fact]
+    public async Task AssignPlayerToTeam_WhenSuccessful_ReturnsOkResult()
+    {
+        // Arrange
+        var responseDto = new PlayerResponseDto { Id = 1, Name = "Test Player", TeamId = 1, TeamName = "Team A" };
+        _mockPlayerService.Setup(s => s.AssignPlayerToTeamAsync(1, 1)).ReturnsAsync(responseDto);
+
+        // Act
+        var result = await _controller.AssignPlayerToTeam(1, 1);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var returnedPlayer = Assert.IsType<PlayerResponseDto>(okResult.Value);
+        Assert.Equal(1, returnedPlayer.TeamId);
+    }
+
+    [Fact]
+    public async Task AssignPlayerToTeam_WhenPlayerOrTeamNotFound_ReturnsNotFound()
+    {
+        // Arrange
+        _mockPlayerService.Setup(s => s.AssignPlayerToTeamAsync(99, 99)).ReturnsAsync((PlayerResponseDto?)null);
+
+        // Act
+        var result = await _controller.AssignPlayerToTeam(99, 99);
+
+        // Assert
+        var notFoundResult = Assert.IsType<NotFoundObjectResult>(result);
+        Assert.Equal("Player or Team not found.", notFoundResult.Value);
     }
 }

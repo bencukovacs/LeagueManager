@@ -49,27 +49,46 @@ public class PlayersController : ControllerBase
         }
         catch (ArgumentException ex) { return BadRequest(ex.Message); }
         catch (InvalidOperationException ex) { return BadRequest(ex.Message); }
-        catch (UnauthorizedAccessException ex) 
-        { 
+        catch (UnauthorizedAccessException ex)
+        {
             // Return a 403 Forbidden status with a custom error object
             return StatusCode(StatusCodes.Status403Forbidden, new { Message = ex.Message });
         }
     }
 
-    [HttpDelete("{id}")]
+    [HttpPatch("{id}/remove-from-roster")]
     [Authorize]
-    public async Task<IActionResult> DeletePlayer(int id)
+    public async Task<IActionResult> RemovePlayerFromRoster(int id)
+    {
+        var player = await _playerService.GetPlayerByIdAsync(id);
+        if (player == null)
+        {
+            return NotFound();
+        }
+
+        // Authorization: Can the current user manage this player's team?
+        var authorizationResult = await _authorizationService.AuthorizeAsync(User, player.TeamId, "CanManageTeam");
+        if (!authorizationResult.Succeeded)
+        {
+            return Forbid();
+        }
+
+        await _playerService.RemovePlayerFromRosterAsync(id);
+        return NoContent();
+    }
+
+    [HttpDelete("{id}")]
+    [Authorize(Roles = "Admin")] // This is now strictly Admin-only
+    public async Task<IActionResult> DeletePlayerPermanently(int id)
     {
         try
         {
-            await _playerService.DeletePlayerAsync(id);
+            await _playerService.DeletePlayerPermanentlyAsync(id);
             return NoContent();
         }
-        catch (KeyNotFoundException ex) { return NotFound(ex.Message); }
-        catch (UnauthorizedAccessException ex) 
-        { 
-            // Return a 403 Forbidden status with a custom error object
-            return StatusCode(StatusCodes.Status403Forbidden, new { Message = ex.Message });
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ex.Message);
         }
     }
 
@@ -92,4 +111,25 @@ public class PlayersController : ControllerBase
         var updatedPlayerDto = await _playerService.UpdatePlayerAsync(id, playerDto);
         return Ok(updatedPlayerDto);
     }
+
+    [HttpGet("unassigned")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> GetUnassignedPlayers()
+    {
+        var players = await _playerService.GetUnassignedPlayersAsync();
+        return Ok(players);
+    }
+    
+    [HttpPatch("{playerId}/assign/{teamId}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> AssignPlayerToTeam(int playerId, int teamId)
+    {
+        var updatedPlayer = await _playerService.AssignPlayerToTeamAsync(playerId, teamId);
+        if (updatedPlayer == null)
+        {
+            return NotFound("Player or Team not found.");
+        }
+        return Ok(updatedPlayer);
+    }
+    
 }

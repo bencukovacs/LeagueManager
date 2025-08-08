@@ -22,6 +22,7 @@ import SubmitResultPage from './pages/SubmitResultPage'
 import JoinTeamPage from './pages/JoinTeamPage'
 import AdminManageLocationsPage from './pages/AdminManageLocationsPage'
 import AdminManageFixturesPage from './pages/AdminManageFixturesPage'
+import AdminManagePlayersPage from './pages/AdminManagePlayersPage'
 
 const queryClient = new QueryClient()
 
@@ -61,6 +62,7 @@ const router = createBrowserRouter([
               { path: "teams", element: <AdminManageTeamsPage /> }, // /admin/teams shows the management page
               { path: "locations", element: <AdminManageLocationsPage /> },
               { path: "fixtures", element: <AdminManageFixturesPage /> },
+              { path: "players", element: <AdminManagePlayersPage /> },
             ],
           },
         ],

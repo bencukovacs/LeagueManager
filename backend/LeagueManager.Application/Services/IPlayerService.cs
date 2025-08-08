@@ -9,7 +9,10 @@ public interface IPlayerService
     Task<PlayerResponseDto?> GetPlayerByIdAsync(int id);
     Task<PlayerResponseDto> CreatePlayerAsync(PlayerDto playerDto);
     Task<PlayerResponseDto?> UpdatePlayerAsync(int id, PlayerDto playerDto);
-    Task DeletePlayerAsync(int id);
+    Task RemovePlayerFromRosterAsync(int id);
+    Task DeletePlayerPermanentlyAsync(int id);
     Task<Player?> GetDomainPlayerByIdAsync(int id);
     Task<IEnumerable<PlayerResponseDto>> GetPlayersForTeamAsync(int teamId);
+    Task<IEnumerable<PlayerResponseDto>> GetUnassignedPlayersAsync();
+    Task<PlayerResponseDto?> AssignPlayerToTeamAsync(int playerId, int teamId);
 }
