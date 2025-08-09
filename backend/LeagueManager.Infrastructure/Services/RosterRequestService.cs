@@ -12,77 +12,78 @@ namespace LeagueManager.Infrastructure.Services;
 
 public class RosterRequestService : IRosterRequestService
 {
-  private readonly LeagueDbContext _context;
-  private readonly IMapper _mapper;
-  private readonly IHttpContextAccessor _httpContextAccessor;
+    private const string _notAuthedMsg = "User is not authenticated.";
+    private readonly LeagueDbContext _context;
+    private readonly IMapper _mapper;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
-  public RosterRequestService(LeagueDbContext context, IMapper mapper, IHttpContextAccessor httpContextAccessor)
-  {
-    _context = context;
-    _mapper = mapper;
-    _httpContextAccessor = httpContextAccessor;
-  }
-
-  public async Task<RosterRequestResponseDto> CreateJoinRequestAsync(int teamId)
-  {
-    var currentUserId = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier)
-        ?? throw new UnauthorizedAccessException("User is not authenticated.");
-
-    var team = await _context.Teams.FindAsync(teamId)
-        ?? throw new ArgumentException("Team not found.");
-
-    if (team.Status != TeamStatus.Approved)
+    public RosterRequestService(LeagueDbContext context, IMapper mapper, IHttpContextAccessor httpContextAccessor)
     {
-      throw new InvalidOperationException("You can only request to join approved teams.");
+        _context = context;
+        _mapper = mapper;
+        _httpContextAccessor = httpContextAccessor;
     }
 
-    // Check if a pending request from this user to this team already exists.
-    var existingRequest = await _context.RosterRequests.AnyAsync(r => 
-        r.UserId == currentUserId && 
-        r.TeamId == teamId && 
-        r.Status == RosterRequestStatus.PendingLeaderApproval);
-
-    if (existingRequest)
-    {
-        // If it exists, throw an error.
-        throw new InvalidOperationException("You already have a pending request to join this team.");
-    }
-
-    var request = new RosterRequest
-    {
-      UserId = currentUserId,
-      TeamId = teamId,
-      Type = RosterRequestType.JoinRequest,
-      Status = RosterRequestStatus.PendingLeaderApproval
-    };
-
-    _context.RosterRequests.Add(request);
-    await _context.SaveChangesAsync();
-
-    return _mapper.Map<RosterRequestResponseDto>(request);
-  }
-
-  public async Task<IEnumerable<RosterRequestResponseDto>> GetPendingJoinRequestsForMyTeamAsync()
-  {
-    var currentUserId = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier)
-        ?? throw new UnauthorizedAccessException("User is not authenticated.");
-
-    var teamMembership = await _context.TeamMemberships.FirstOrDefaultAsync(m => m.UserId == currentUserId && (m.Role == TeamRole.Leader || m.Role == TeamRole.AssistantLeader));
-    if (teamMembership == null)
-    {
-      return Enumerable.Empty<RosterRequestResponseDto>();
-    }
-
-    return await _context.RosterRequests
-        .Where(r => r.TeamId == teamMembership.TeamId && r.Status == RosterRequestStatus.PendingLeaderApproval)
-        .ProjectTo<RosterRequestResponseDto>(_mapper.ConfigurationProvider)
-        .ToListAsync();
-  }
-    
-     public async Task<TeamMembership> ApproveJoinRequestAsync(int requestId)
+    public async Task<RosterRequestResponseDto> CreateJoinRequestAsync(int teamId)
     {
         var currentUserId = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier)
-            ?? throw new UnauthorizedAccessException("User is not authenticated.");
+            ?? throw new UnauthorizedAccessException(_notAuthedMsg);
+
+        var team = await _context.Teams.FindAsync(teamId)
+            ?? throw new ArgumentException("Team not found.");
+
+        if (team.Status != TeamStatus.Approved)
+        {
+            throw new InvalidOperationException("You can only request to join approved teams.");
+        }
+
+        // Check if a pending request from this user to this team already exists.
+        var existingRequest = await _context.RosterRequests.AnyAsync(r =>
+            r.UserId == currentUserId &&
+            r.TeamId == teamId &&
+            r.Status == RosterRequestStatus.PendingLeaderApproval);
+
+        if (existingRequest)
+        {
+            // If it exists, throw an error.
+            throw new InvalidOperationException("You already have a pending request to join this team.");
+        }
+
+        var request = new RosterRequest
+        {
+            UserId = currentUserId,
+            TeamId = teamId,
+            Type = RosterRequestType.JoinRequest,
+            Status = RosterRequestStatus.PendingLeaderApproval
+        };
+
+        _context.RosterRequests.Add(request);
+        await _context.SaveChangesAsync();
+
+        return _mapper.Map<RosterRequestResponseDto>(request);
+    }
+
+    public async Task<IEnumerable<RosterRequestResponseDto>> GetPendingJoinRequestsForMyTeamAsync()
+    {
+        var currentUserId = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? throw new UnauthorizedAccessException(_notAuthedMsg);
+
+        var teamMembership = await _context.TeamMemberships.FirstOrDefaultAsync(m => m.UserId == currentUserId && (m.Role == TeamRole.Leader || m.Role == TeamRole.AssistantLeader));
+        if (teamMembership == null)
+        {
+            return Enumerable.Empty<RosterRequestResponseDto>();
+        }
+
+        return await _context.RosterRequests
+            .Where(r => r.TeamId == teamMembership.TeamId && r.Status == RosterRequestStatus.PendingLeaderApproval)
+            .ProjectTo<RosterRequestResponseDto>(_mapper.ConfigurationProvider)
+            .ToListAsync();
+    }
+
+    public async Task<TeamMembership> ApproveJoinRequestAsync(int requestId)
+    {
+        var currentUserId = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? throw new UnauthorizedAccessException(_notAuthedMsg);
 
         var request = await _context.RosterRequests.FindAsync(requestId)
             ?? throw new ArgumentException("Request not found.");
@@ -133,7 +134,7 @@ public class RosterRequestService : IRosterRequestService
     public async Task RejectJoinRequestAsync(int requestId)
     {
         var currentUserId = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier)
-            ?? throw new UnauthorizedAccessException("User is not authenticated.");
+            ?? throw new UnauthorizedAccessException(_notAuthedMsg);
 
         var request = await _context.RosterRequests.FindAsync(requestId)
             ?? throw new ArgumentException("Request not found.");
@@ -148,6 +149,42 @@ public class RosterRequestService : IRosterRequestService
         }
 
         request.Status = RosterRequestStatus.Rejected;
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task<IEnumerable<RosterRequestResponseDto>> GetMyPendingRequestsAsync()
+    {
+        var currentUserId = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? throw new UnauthorizedAccessException(_notAuthedMsg);
+
+        return await _context.RosterRequests
+            .Where(r => r.UserId == currentUserId &&
+                        (r.Status == RosterRequestStatus.PendingLeaderApproval || r.Status == RosterRequestStatus.PendingPlayerAcceptance))
+            .ProjectTo<RosterRequestResponseDto>(_mapper.ConfigurationProvider)
+            .ToListAsync();
+    }
+
+    public async Task CancelMyRequestAsync(int requestId)
+    {
+        var currentUserId = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? throw new UnauthorizedAccessException(_notAuthedMsg);
+
+        var request = await _context.RosterRequests.FindAsync(requestId)
+            ?? throw new ArgumentException("Request not found.");
+
+        // Authorization check: Does this request belong to the current user?
+        if (request.UserId != currentUserId)
+        {
+            throw new UnauthorizedAccessException("You are not authorized to cancel this request.");
+        }
+
+        // Business Rule: You can only cancel pending requests.
+        if (request.Status != RosterRequestStatus.PendingLeaderApproval && request.Status != RosterRequestStatus.PendingPlayerAcceptance)
+        {
+            throw new InvalidOperationException("This request cannot be cancelled as it is already resolved.");
+        }
+
+        _context.RosterRequests.Remove(request);
         await _context.SaveChangesAsync();
     }
 }

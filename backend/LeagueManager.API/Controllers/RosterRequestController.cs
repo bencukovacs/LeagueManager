@@ -35,40 +35,62 @@ public class RosterRequestsController : ControllerBase
     var requests = await _rosterRequestService.GetPendingJoinRequestsForMyTeamAsync();
     return Ok(requests);
   }
-    
-    [HttpPatch("{requestId}/approve")]
-    public async Task<IActionResult> ApproveJoinRequest(int requestId)
-    {
-        try
-        {
-            await _rosterRequestService.ApproveJoinRequestAsync(requestId);
-            return Ok(new { Message = "Join request approved successfully." });
-        }
-        catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException)
-        {
-            return BadRequest(ex.Message);
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            return Forbid(ex.Message);
-        }
-    }
 
-    [HttpPatch("{requestId}/reject")]
-    public async Task<IActionResult> RejectJoinRequest(int requestId)
+  [HttpPatch("{requestId}/approve")]
+  public async Task<IActionResult> ApproveJoinRequest(int requestId)
+  {
+    try
     {
-        try
-        {
-            await _rosterRequestService.RejectJoinRequestAsync(requestId);
-            return Ok(new { Message = "Join request rejected successfully." });
-        }
-        catch (Exception ex) when (ex is ArgumentException)
-        {
-            return NotFound(ex.Message);
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            return Forbid(ex.Message);
-        }
+      await _rosterRequestService.ApproveJoinRequestAsync(requestId);
+      return Ok(new { Message = "Join request approved successfully." });
     }
+    catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException)
+    {
+      return BadRequest(ex.Message);
+    }
+    catch (UnauthorizedAccessException ex)
+    {
+      return Forbid(ex.Message);
+    }
+  }
+
+  [HttpPatch("{requestId}/reject")]
+  public async Task<IActionResult> RejectJoinRequest(int requestId)
+  {
+    try
+    {
+      await _rosterRequestService.RejectJoinRequestAsync(requestId);
+      return Ok(new { Message = "Join request rejected successfully." });
+    }
+    catch (Exception ex) when (ex is ArgumentException)
+    {
+      return NotFound(ex.Message);
+    }
+    catch (UnauthorizedAccessException ex)
+    {
+      return Forbid(ex.Message);
+    }
+  }
+    
+  [HttpDelete("{requestId}")]
+  public async Task<IActionResult> CancelMyRequest(int requestId)
+  {
+      try
+      {
+          await _rosterRequestService.CancelMyRequestAsync(requestId);
+          return NoContent();
+      }
+      catch (Exception ex) when (ex is ArgumentException)
+      {
+          return NotFound(ex.Message);
+      }
+      catch (Exception ex) when (ex is InvalidOperationException)
+      {
+          return BadRequest(ex.Message);
+      }
+      catch (UnauthorizedAccessException ex)
+      {
+          return Forbid(ex.Message);
+      }
+  }
 }

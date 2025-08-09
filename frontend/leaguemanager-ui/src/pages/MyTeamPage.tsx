@@ -1,10 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import apiClient from '../api/apiClient';
-import type { MyTeamResponse, PlayerResponseDto, Team } from '../types';
+import type { MyTeamResponse, PlayerResponseDto, RosterRequestResponseDto, Team } from '../types';
 import { Link } from 'react-router-dom';
 import RosterManagement from '../features/teams/RosterManagement';
 import EditTeamForm from '../features/teams/EditTeamForm';
 import JoinRequestsList from '../features/teams/JoinRequestsList';
+import MyPendingRequests from '../features/me/MyPendingRequests';
+import { useAuth } from '../contexts/AuthContext';
 
 // Fetch function for the user's team
 const fetchMyTeam = async (): Promise<MyTeamResponse | null> => {
@@ -21,6 +23,12 @@ const fetchMyTeam = async (): Promise<MyTeamResponse | null> => {
 const fetchRoster = async (teamId: number): Promise<PlayerResponseDto[]> => {
   const { data } = await apiClient.get(`/teams/${teamId}/players`);
   return data;
+};
+
+// Fetch function for the user's pending requests
+const fetchMyPendingRequests = async (): Promise<RosterRequestResponseDto[]> => {
+    const { data } = await apiClient.get('/me/roster-requests');
+    return data;
 };
 
 // A component for the onboarding checklist, shown for pending teams
@@ -47,10 +55,19 @@ const OnboardingChecklist = ({ team, playerCount }: { team: Team, playerCount: n
 };
 
 export default function MyTeamPage() {
+  const { user } = useAuth();
+  
   // First query: get the user's team and their role on it
   const { data: myTeamData, isLoading: isTeamLoading } = useQuery({
     queryKey: ['myTeam'],
     queryFn: fetchMyTeam,
+  });
+
+  // Query to fetch the user's pending requests, runs only if they are not on a team
+  const { data: pendingRequests } = useQuery({
+    queryKey: ['myPendingRequests'],
+    queryFn: fetchMyPendingRequests,
+    enabled: !myTeamData,
   });
 
   const teamId = myTeamData?.team?.id;
@@ -68,6 +85,7 @@ export default function MyTeamPage() {
 
   // This is the "lobby" view for users without a team
   if (!myTeamData) {
+    const hasPendingRequest = pendingRequests && pendingRequests.length > 0;
     return (
       <div className="container mx-auto p-4 text-center">
         <h2 className="text-2xl font-bold">You are not on a team yet.</h2>
@@ -75,19 +93,29 @@ export default function MyTeamPage() {
           You can create your own team or request to join an existing one.
         </p>
         <div className="flex justify-center space-x-4 mt-6">
-          <Link to="/create-team" className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold">
+          <Link
+            to="/create-team"
+            className={`px-6 py-3 rounded-lg font-semibold ${hasPendingRequest ? 'bg-gray-400 text-gray-700 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
+            onClick={(e) => { if (hasPendingRequest) e.preventDefault(); }}
+          >
             Create a Team
           </Link>
-          <Link to="/join-team" className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold">
+          <Link
+            to="/join-team"
+            className={`px-6 py-3 rounded-lg font-semibold ${hasPendingRequest ? 'bg-gray-400 text-gray-700 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'}`}
+            onClick={(e) => { if (hasPendingRequest) e.preventDefault(); }}
+          >
             Join a Team
           </Link>
         </div>
+        <MyPendingRequests />
       </div>
     );
   }
 
   const { team, userRole } = myTeamData;
   const isManager = userRole === 'Leader' || userRole === 'AssistantLeader';
+  const isAdmin = user?.roles.includes('Admin') ?? false;
 
   return (
     <div className="container mx-auto p-4">
@@ -115,7 +143,12 @@ export default function MyTeamPage() {
           </div>
           <JoinRequestsList />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
-            <RosterManagement teamId={team.id} roster={roster || []} isLoading={isRosterLoading} />
+            <RosterManagement 
+              teamId={team.id} 
+              roster={roster || []} 
+              isLoading={isRosterLoading}
+              isAdmin={isAdmin}
+            />
             <EditTeamForm team={team} />
           </div>
         </div>
@@ -125,7 +158,6 @@ export default function MyTeamPage() {
         <div className="mt-6">
           <h2 className="text-2xl font-semibold border-b pb-2 mb-4">My Team</h2>
           <p>Welcome, {team.name} team member!</p>
-          {/* We can display the roster here for viewing later */}
         </div>
       )}
     </div>

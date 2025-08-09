@@ -9,4 +9,6 @@ public interface IRosterRequestService
   Task<IEnumerable<RosterRequestResponseDto>> GetPendingJoinRequestsForMyTeamAsync();
   Task<TeamMembership> ApproveJoinRequestAsync(int requestId);
   Task RejectJoinRequestAsync(int requestId);
+  Task<IEnumerable<RosterRequestResponseDto>> GetMyPendingRequestsAsync();
+  Task CancelMyRequestAsync(int requestId);
 }
