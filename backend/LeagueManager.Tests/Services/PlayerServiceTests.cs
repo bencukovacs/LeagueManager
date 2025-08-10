@@ -36,22 +36,22 @@ public class PlayerServiceTests : IDisposable
   private LeagueDbContext GetDbContext() => new LeagueDbContext(_options);
 
   protected virtual void Dispose(bool disposing)
+  {
+    if (!_disposed)
     {
-        if (!_disposed)
-        {
-            if (disposing)
-            {
-                _connection.Close();
-                _connection.Dispose();
-            }
-            _disposed = true;
-        }
+      if (disposing)
+      {
+        _connection.Close();
+        _connection.Dispose();
+      }
+      _disposed = true;
     }
-    public void Dispose()
-    {
-        Dispose(true);
-        GC.SuppressFinalize(this);
-    }
+  }
+  public void Dispose()
+  {
+    Dispose(true);
+    GC.SuppressFinalize(this);
+  }
 
   private Mock<IHttpContextAccessor> CreateMockHttpContextAccessor(string? userId, string? role = null)
   {
@@ -147,28 +147,45 @@ public class PlayerServiceTests : IDisposable
     Assert.NotNull(playerInDb);
     Assert.Null(playerInDb.TeamId);
   }
-    
+
   [Fact]
   public async Task AssignPlayerToTeamAsync_WhenSuccessful_UpdatesPlayerTeamId()
   {
-      // Arrange
-      await using var context = GetDbContext();
-      var team = new Team { Id = 1, Name = "Team A", Status = TeamStatus.Approved };
-        var player = new Player { Id = 1, Name = "Free Agent", TeamId = null };
-      context.Teams.Add(team);
-      context.Players.Add(player);
-      await context.SaveChangesAsync();
+    // Arrange
+    await using var context = GetDbContext();
+    var team = new Team { Id = 1, Name = "Team A", Status = TeamStatus.Approved };
+    var player = new Player { Id = 1, Name = "Free Agent", TeamId = null };
+    context.Teams.Add(team);
+    context.Players.Add(player);
+    await context.SaveChangesAsync();
 
-      var service = new PlayerService(context, _mapper, new Mock<IHttpContextAccessor>().Object);
+    var service = new PlayerService(context, _mapper, new Mock<IHttpContextAccessor>().Object);
 
-      // Act
-      var result = await service.AssignPlayerToTeamAsync(1, 1);
+    // Act
+    var result = await service.AssignPlayerToTeamAsync(1, 1);
 
-      // Assert
-      Assert.NotNull(result);
-      Assert.Equal(1, result.TeamId); // Check the returned DTO
-      var playerInDb = await context.Players.FindAsync(1);
-      Assert.NotNull(playerInDb);
-      Assert.Equal(1, playerInDb.TeamId); // Check the database
+    // Assert
+    Assert.NotNull(result);
+    Assert.Equal(1, result.TeamId); // Check the returned DTO
+    var playerInDb = await context.Players.FindAsync(1);
+    Assert.NotNull(playerInDb);
+    Assert.Equal(1, playerInDb.TeamId); // Check the database
   }
+  
+  [Fact]
+    public async Task AssignPlayerToTeamAsync_WhenTeamNotFound_ReturnsNull()
+    {
+        // Arrange
+        await using var context = GetDbContext();
+        var player = new Player { Id = 1, Name = "Free Agent", TeamId = null };
+        context.Players.Add(player);
+        await context.SaveChangesAsync();
+        var service = new PlayerService(context, _mapper, new Mock<IHttpContextAccessor>().Object);
+
+        // Act
+        var result = await service.AssignPlayerToTeamAsync(1, 99); // Non-existent team
+
+        // Assert
+        Assert.Null(result);
+    }
 }
