@@ -15,15 +15,17 @@ public class TeamService : ITeamService
     private readonly LeagueDbContext _context;
     private readonly IMapper _mapper;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ILeagueConfigurationService _configService;
 
-    public TeamService(LeagueDbContext context, IMapper mapper, IHttpContextAccessor httpContextAccessor)
-    {
-        _context = context;
-        _mapper = mapper;
-        _httpContextAccessor = httpContextAccessor;
-    }
+  public TeamService(LeagueDbContext context, IMapper mapper, IHttpContextAccessor httpContextAccessor, ILeagueConfigurationService configService)
+  {
+    _context = context;
+    _mapper = mapper;
+    _httpContextAccessor = httpContextAccessor;
+    _configService = configService;
+  }
 
-    public async Task<IEnumerable<TeamResponseDto>> GetAllTeamsAsync()
+  public async Task<IEnumerable<TeamResponseDto>> GetAllTeamsAsync()
     {
         return await _context.Teams
             .Where(t => t.Status == TeamStatus.Approved)
@@ -120,12 +122,14 @@ public class TeamService : ITeamService
             return null;
         }
 
-        const int MinPlayersRequired = 6;
+        var config = await _configService.GetConfigurationAsync();
+        var minPlayersRequired = config.MinPlayersPerTeam;
+
         var playerCount = await _context.Players.CountAsync(p => p.TeamId == teamId);
 
-        if (playerCount < MinPlayersRequired)
+        if (playerCount < minPlayersRequired)
         {
-            throw new InvalidOperationException($"Team cannot be approved. It has {playerCount} players but requires at least {MinPlayersRequired}.");
+            throw new InvalidOperationException($"Team cannot be approved. It has {playerCount} players but requires at least {minPlayersRequired}.");
         }
 
         if (string.IsNullOrWhiteSpace(team.PrimaryColor))
@@ -176,32 +180,34 @@ public class TeamService : ITeamService
             .ToListAsync();
     }
 
-    public async Task<MyTeamResponseDto?> GetMyTeamAsync()
+    public async Task<MyTeamAndConfigResponseDto> GetMyTeamAndConfigAsync()
     {
         var currentUserId = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrEmpty(currentUserId))
+        
+        MyTeamResponseDto? myTeam = null;
+        if (!string.IsNullOrEmpty(currentUserId))
         {
-            return null; // No user logged in
+            var membership = await _context.TeamMemberships
+                .Include(m => m.Team)
+                .FirstOrDefaultAsync(m => m.UserId == currentUserId);
+
+            if (membership != null && membership.Team != null)
+            {
+                myTeam = new MyTeamResponseDto
+                {
+                    Team = _mapper.Map<TeamResponseDto>(membership.Team),
+                    UserRole = membership.Role.ToString()
+                };
+            }
         }
 
-        // Find the user's first membership record
-        var membership = await _context.TeamMemberships
-            .Include(m => m.Team) // We need the full team object
-            .FirstOrDefaultAsync(m => m.UserId == currentUserId);
+        var config = await _configService.GetConfigurationAsync();
 
-        if (membership == null || membership.Team == null)
+        return new MyTeamAndConfigResponseDto
         {
-            return null; // User is not on any team
-        }
-
-        // Construct the new, richer response object
-        var response = new MyTeamResponseDto
-        {
-            Team = _mapper.Map<TeamResponseDto>(membership.Team),
-            UserRole = membership.Role.ToString()
+            MyTeam = myTeam,
+            Config = config
         };
-
-        return response;
     }
     
     public async Task<IEnumerable<FixtureResponseDto>> GetFixturesForMyTeamAsync()

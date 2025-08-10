@@ -67,3 +67,15 @@ export interface Location {
   address: string | null;
   pitchNumber: string | null;
 }
+
+export interface LeagueConfiguration {
+  minPlayersPerTeam: number;
+  matchLengthMinutes: number;
+  midSeasonTransferLimit: number;
+  rosterLockDate: string | null;
+}
+
+export interface MyTeamAndConfigResponse {
+  myTeam: MyTeamResponse | null;
+  config: LeagueConfiguration;
+}

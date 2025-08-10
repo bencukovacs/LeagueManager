@@ -19,13 +19,13 @@ public class MyTeamController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetMyTeam()
     {
-        var team = await _teamService.GetMyTeamAsync();
-        if (team == null)
+        var data = await _teamService.GetMyTeamAndConfigAsync();
+        if (data == null)
         {
             // This means the user is logged in but is not a leader of any team
             return NotFound("You do not currently have a team.");
         }
-        return Ok(team);
+        return Ok(data);
     }
 
     [HttpGet("fixtures")]

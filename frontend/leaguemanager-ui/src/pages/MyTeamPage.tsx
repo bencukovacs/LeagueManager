@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import apiClient from '../api/apiClient';
-import type { MyTeamResponse, PlayerResponseDto, RosterRequestResponseDto, Team } from '../types';
+import type { MyTeamAndConfigResponse, PlayerResponseDto, RosterRequestResponseDto, Team } from '../types';
 import { Link } from 'react-router-dom';
 import RosterManagement from '../features/teams/RosterManagement';
 import EditTeamForm from '../features/teams/EditTeamForm';
@@ -8,13 +8,12 @@ import JoinRequestsList from '../features/teams/JoinRequestsList';
 import MyPendingRequests from '../features/me/MyPendingRequests';
 import { useAuth } from '../contexts/AuthContext';
 
-// Fetch function for the user's team
-const fetchMyTeam = async (): Promise<MyTeamResponse | null> => {
+// This fetch function now expects the new, combined response object
+const fetchMyTeamAndConfig = async (): Promise<MyTeamAndConfigResponse | null> => {
   try {
     const { data } = await apiClient.get('/my-team');
     return data;
   } catch (error) {
-    // A 404 from this endpoint is an expected outcome, meaning the user is not on a team.
     return null;
   }
 };
@@ -31,10 +30,8 @@ const fetchMyPendingRequests = async (): Promise<RosterRequestResponseDto[]> => 
     return data;
 };
 
-// A component for the onboarding checklist, shown for pending teams
-const OnboardingChecklist = ({ team, playerCount }: { team: Team, playerCount: number }) => {
-  const minPlayers = 5; // This will later come from the LeagueConfiguration
-
+// The checklist now gets the minPlayers value from its props
+const OnboardingChecklist = ({ team, playerCount, minPlayers }: { team: Team, playerCount: number, minPlayers: number }) => {
   const hasEnoughPlayers = playerCount >= minPlayers;
   const hasSetColors = !!team.primaryColor;
 
@@ -57,11 +54,15 @@ const OnboardingChecklist = ({ team, playerCount }: { team: Team, playerCount: n
 export default function MyTeamPage() {
   const { user } = useAuth();
   
-  // First query: get the user's team and their role on it
-  const { data: myTeamData, isLoading: isTeamLoading } = useQuery({
-    queryKey: ['myTeam'],
-    queryFn: fetchMyTeam,
+  // This query now fetches the combined team and config data
+  const { data: response, isLoading: isTeamLoading } = useQuery({
+    queryKey: ['myTeamAndConfig'],
+    queryFn: fetchMyTeamAndConfig,
   });
+
+  const myTeamData = response?.myTeam;
+  const config = response?.config;
+  const teamId = myTeamData?.team?.id;
 
   // Query to fetch the user's pending requests, runs only if they are not on a team
   const { data: pendingRequests } = useQuery({
@@ -69,8 +70,6 @@ export default function MyTeamPage() {
     queryFn: fetchMyPendingRequests,
     enabled: !myTeamData,
   });
-
-  const teamId = myTeamData?.team?.id;
 
   // Second query: get the roster, which depends on the first query
   const { data: roster, isLoading: isRosterLoading } = useQuery({
@@ -129,8 +128,13 @@ export default function MyTeamPage() {
         </div>
       </div>
       
-      {team.status === 'PendingApproval' && (
-        <OnboardingChecklist team={team} playerCount={roster?.length || 0} />
+      {/* The checklist now gets the minPlayers value from the fetched config */}
+      {team.status === 'PendingApproval' && config && (
+        <OnboardingChecklist 
+          team={team} 
+          playerCount={roster?.length || 0} 
+          minPlayers={config.minPlayersPerTeam} 
+        />
       )}
 
       {isManager && (

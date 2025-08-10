@@ -32,11 +32,11 @@ export default function MyPendingRequests() {
   if (!requests || requests.length === 0) return null;
 
   return (
-    <div className="mt-8 p-4 border rounded-lg bg-gray-50">
+    <div className="mt-8 p-4 border rounded-lg bg-sky-600">
       <h3 className="text-xl font-semibold mb-4">Your Pending Requests</h3>
       <ul className="space-y-2">
         {requests.map((req) => (
-          <li key={req.id} className="flex justify-between items-center p-2 border rounded bg-white">
+          <li key={req.id} className="flex justify-between items-center p-2 border rounded bg-sky-400">
             <span>Request to join <span className="font-semibold">{req.teamName}</span> is {req.status}.</span>
             <button
               onClick={() => mutation.mutate(req.id)}

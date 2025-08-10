@@ -18,35 +18,44 @@ public class MyTeamControllerTests
     }
 
     [Fact]
-    public async Task GetMyTeam_WhenServiceReturnsTeam_ReturnsOkResult()
+    public async Task GetMyTeam_WhenServiceReturnsData_ReturnsOkResult()
     {
         // Arrange
         var teamDto = new TeamResponseDto { Id = 1, Name = "My Team", Status = "Approved" };
-        var myTeamResponseDto = new MyTeamResponseDto { Team = teamDto, UserRole = "Leader" };
-        _mockTeamService.Setup(s => s.GetMyTeamAsync()).ReturnsAsync(myTeamResponseDto);
+        var myTeamDto = new MyTeamResponseDto { Team = teamDto, UserRole = "Leader" };
+        var configDto = new LeagueConfigurationDto { MinPlayersPerTeam = 5 };
+        var responseDto = new MyTeamAndConfigResponseDto { MyTeam = myTeamDto, Config = configDto };
+        
+        _mockTeamService.Setup(s => s.GetMyTeamAndConfigAsync()).ReturnsAsync(responseDto);
 
         // Act
         var result = await _controller.GetMyTeam();
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
-        var returnedData = Assert.IsType<MyTeamResponseDto>(okResult.Value);
-        Assert.Equal(1, returnedData.Team.Id);
-        Assert.Equal("Leader", returnedData.UserRole);
+        var returnedData = Assert.IsType<MyTeamAndConfigResponseDto>(okResult.Value);
+        Assert.NotNull(returnedData.MyTeam);
+        Assert.Equal(1, returnedData.MyTeam.Team.Id);
+        Assert.Equal("Leader", returnedData.MyTeam.UserRole);
     }
 
     [Fact]
-    public async Task GetMyTeam_WhenServiceReturnsNull_ReturnsNotFound()
+    public async Task GetMyTeam_WhenUserIsNotOnTeam_ReturnsOkWithNullTeam()
     {
         // Arrange
-        _mockTeamService.Setup(s => s.GetMyTeamAsync()).ReturnsAsync((MyTeamResponseDto?)null);
+        var configDto = new LeagueConfigurationDto { MinPlayersPerTeam = 5 };
+        // The service returns the config, but the MyTeam property is null
+        var responseDto = new MyTeamAndConfigResponseDto { MyTeam = null, Config = configDto };
+        _mockTeamService.Setup(s => s.GetMyTeamAndConfigAsync()).ReturnsAsync(responseDto);
 
         // Act
         var result = await _controller.GetMyTeam();
 
         // Assert
-        var notFoundResult = Assert.IsType<NotFoundObjectResult>(result);
-        Assert.Equal("You do not currently have a team.", notFoundResult.Value);
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var returnedData = Assert.IsType<MyTeamAndConfigResponseDto>(okResult.Value);
+        Assert.Null(returnedData.MyTeam); // Verify that the MyTeam part of the response is null
+        Assert.NotNull(returnedData.Config);
     }
 
     [Fact]
@@ -55,7 +64,7 @@ public class MyTeamControllerTests
         // Arrange
         var fixtureList = new List<FixtureResponseDto>
         {
-            new FixtureResponseDto { Id = 1, HomeTeam = new TeamResponseDto { Id = 1, Name = "A", Status = "Approved" }, AwayTeam = new TeamResponseDto { Id = 2, Name = "B", Status = "Approved" }, Status = "Scheduled" }
+            new FixtureResponseDto { Id = 1, HomeTeam = new TeamResponseDto { Id = 1, Name = "A", Status = "Approved" }, AwayTeam = new TeamResponseDto { Id = 2, Name = "B", Status = "Approved" }, Status = "Scheduled", HomeTeamRoster = new(), AwayTeamRoster = new() }
         };
         _mockTeamService.Setup(s => s.GetFixturesForMyTeamAsync()).ReturnsAsync(fixtureList);
 
