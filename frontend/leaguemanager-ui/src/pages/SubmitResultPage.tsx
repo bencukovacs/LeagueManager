@@ -1,10 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
 import apiClient from '../api/apiClient';
-import type { FixtureResponseDto } from '../types';
+import type { FixtureResponseDto, MyTeamAndConfigResponse } from '../types';
 import { useState, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useQuery as useMyTeamQuery } from '@tanstack/react-query';
 
 const fetchFixture = async (fixtureId: string): Promise<FixtureResponseDto> => {
   const { data } = await apiClient.get(`/fixtures/${fixtureId}`);
@@ -15,9 +14,13 @@ const submitResult = async (payload: { fixtureId: string; data: any }) => {
   await apiClient.post(`/fixtures/${payload.fixtureId}/results`, payload.data);
 };
 
-const fetchMyTeam = async () => {
-    const { data } = await apiClient.get('/my-team');
-    return data;
+const fetchMyTeamAndConfig = async (): Promise<MyTeamAndConfigResponse | null> => {
+    try {
+        const { data } = await apiClient.get('/my-team');
+        return data;
+    } catch (error) {
+        return null;
+    }
 };
 
 export default function SubmitResultPage() {
@@ -36,11 +39,12 @@ export default function SubmitResultPage() {
     enabled: !!fixtureId,
   });
 
-  const { data: myTeamData } = useMyTeamQuery({
-    queryKey: ['myTeam'],
-    queryFn: fetchMyTeam,
+  const { data: response } = useQuery({
+    queryKey: ['myTeamAndConfig'],
+    queryFn: fetchMyTeamAndConfig,
     enabled: !!user,
   });
+  const myTeamData = response?.myTeam;
 
   const homeScore = useMemo(() => {
     if (!fixture) return 0;
@@ -52,9 +56,10 @@ export default function SubmitResultPage() {
     return goalscorers.filter(id => fixture.awayTeamRoster.some(p => p.id === id)).length;
   }, [goalscorers, fixture]);
 
-
   const { yourTeamRoster, opponentRoster } = useMemo(() => {
-    if (!myTeamData || !fixture) return { yourTeamRoster: [], opponentRoster: [] };
+    if (!myTeamData?.team || !fixture) {
+      return { yourTeamRoster: [], opponentRoster: [] };
+    }
     if (myTeamData.team.id === fixture.homeTeam.id) {
       return { yourTeamRoster: fixture.homeTeamRoster, opponentRoster: fixture.awayTeamRoster };
     } else {
@@ -119,7 +124,6 @@ export default function SubmitResultPage() {
           <span className="text-5xl font-bold">{awayScore}</span>
         </div>
 
-        {/* --- NEW: Goalscorers with +/- buttons --- */}
         <div>
           <h2 className="text-xl font-semibold">Goalscorers</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
@@ -150,7 +154,6 @@ export default function SubmitResultPage() {
           </div>
         </div>
 
-        {/* MOM Vote Section (Unchanged) */}
         <div>
           <h2 className="text-xl font-semibold">Man of the Match</h2>
           <div className="grid grid-cols-2 gap-4 mt-2">
