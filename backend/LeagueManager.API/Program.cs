@@ -133,6 +133,7 @@ builder.Services.AddScoped<IResultService, ResultService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ILeagueConfigurationService, LeagueConfigurationService>();
 builder.Services.AddScoped<IRosterRequestService, RosterRequestService>();
+builder.Services.AddScoped<ITeamMembershipService, TeamMembershipService>();
 
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 
