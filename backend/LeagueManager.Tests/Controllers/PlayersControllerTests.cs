@@ -256,4 +256,20 @@ public class PlayersControllerTests
         var notFoundResult = Assert.IsType<NotFoundObjectResult>(result);
         Assert.Equal("Player or Team not found.", notFoundResult.Value);
     }
+    
+    [Fact]
+    public async Task DeletePlayerPermanently_WhenPlayerIsLinkedToUser_ReturnsBadRequest()
+    {
+        // Arrange
+        var expectedErrorMessage = "Cannot permanently delete a player who is linked to a registered user account.";
+        _mockPlayerService.Setup(s => s.DeletePlayerPermanentlyAsync(1))
+            .ThrowsAsync(new InvalidOperationException(expectedErrorMessage));
+
+        // Act
+        var result = await _controller.DeletePlayerPermanently(1);
+
+        // Assert
+        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Contains(expectedErrorMessage, badRequestResult.Value?.ToString());
+    }
 }

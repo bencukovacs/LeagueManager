@@ -78,7 +78,7 @@ public class PlayersController : ControllerBase
     }
 
     [HttpDelete("{id}")]
-    [Authorize(Roles = "Admin")] // This is now strictly Admin-only
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> DeletePlayerPermanently(int id)
     {
         try
@@ -86,9 +86,13 @@ public class PlayersController : ControllerBase
             await _playerService.DeletePlayerPermanentlyAsync(id);
             return NoContent();
         }
-        catch (KeyNotFoundException ex)
+        catch (KeyNotFoundException ex) 
+        { 
+            return NotFound(ex.Message); 
+        }
+        catch (InvalidOperationException ex)
         {
-            return NotFound(ex.Message);
+            return BadRequest(ex.Message);
         }
     }
 

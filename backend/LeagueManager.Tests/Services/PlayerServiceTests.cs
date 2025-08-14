@@ -188,4 +188,26 @@ public class PlayerServiceTests : IDisposable
         // Assert
         Assert.Null(result);
     }
+    
+  [Fact]
+  public async Task DeletePlayerPermanentlyAsync_WhenPlayerIsLinkedToUser_ThrowsException()
+  {
+    // --- ARRANGE ---
+    await using var context = GetDbContext();
+    var user = new User { FullName = "User 123", Id = "user-123" };
+    var team = new Team { Id = 1, Name = "Test Team" };
+    // Create a player that IS linked to a user
+    var player = new Player { Id = 1, Name = "Linked Player", TeamId = 1, UserId = "user-123" };
+    context.Users.Add(user);
+    context.Teams.Add(team);
+    context.Players.Add(player);
+    await context.SaveChangesAsync();
+
+    var service = new PlayerService(context, _mapper, new Mock<IHttpContextAccessor>().Object);
+
+    // --- ACT & ASSERT ---
+    // Verify that the service call throws the correct exception
+    var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.DeletePlayerPermanentlyAsync(1));
+    Assert.Equal("Cannot permanently delete a player who is linked to a registered user account. Please remove them from the roster instead.", exception.Message);
+  }
 }

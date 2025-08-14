@@ -32,7 +32,7 @@ public class TeamMembershipsControllerTests
     public async Task GetTeamMembers_ReturnsOkResult_WithMembers()
     {
         // Arrange
-        var members = new List<TeamMemberResponseDto> { new() { UserId = "1", UserName = "Test", Role = "Leader" } };
+        var members = new List<TeamMemberResponseDto> { new() { UserId = "1", Email = "test@test.hu", FullName = "Test User", Role = "Leader" } };
         _mockMembershipService.Setup(s => s.GetMembersForTeamAsync(1)).ReturnsAsync(members);
 
         // Act
@@ -48,7 +48,7 @@ public class TeamMembershipsControllerTests
     {
         // Arrange
         var dto = new UpdateTeamMemberRoleDto { NewRole = TeamRole.AssistantLeader };
-        var responseDto = new TeamMemberResponseDto { UserId = "user-2", UserName = "Test", Role = "AssistantLeader" };
+        var responseDto = new TeamMemberResponseDto { UserId = "user-2", Email = "test2@test.hu", FullName = "User 2", Role = "AssistantLeader" };
         _mockAuthorizationService
             .Setup(s => s.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), "CanManageTeam"))
             .ReturnsAsync(AuthorizationResult.Success());

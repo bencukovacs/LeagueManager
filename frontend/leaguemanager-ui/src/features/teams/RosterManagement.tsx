@@ -85,6 +85,18 @@ export default function RosterManagement({ teamId, roster, isLoading, isAdmin }:
         updateRoleMutation.mutate({ teamId, userId, newRole: newRoleValue });
     };
 
+    const handleRemove = (playerId: number) => {
+        if (window.confirm('Are you sure you want to remove this player from the roster?')) {
+            removePlayerMutation.mutate(playerId);
+        }
+    };
+
+    const handleDelete = (playerId: number) => {
+        if (window.confirm('Are you sure you want to PERMANENTLY DELETE this player? This action cannot be undone.')) {
+            deletePlayerMutation.mutate(playerId);
+        }
+    };
+
     return (
         <div className="p-4 border rounded-lg bg-sky-400">
             <h3 className="text-xl font-semibold mb-4">Roster & Team Members</h3>
@@ -132,21 +144,21 @@ export default function RosterManagement({ teamId, roster, isLoading, isAdmin }:
                                     {isAdmin ? (
                                         <>
                                             <button
-                                                onClick={() => removePlayerMutation.mutate(player.id)}
-                                                className="text-sm text-yellow-600 hover:underline"
+                                                onClick={() => handleRemove(player.id)} // Use new handler
+                                                className="text-sm text-yellow-200 hover:underline"
                                             >
                                                 Remove from Roster
                                             </button>
                                             <button
-                                                onClick={() => deletePlayerMutation.mutate(player.id)}
-                                                className="text-sm text-red-600 hover:underline"
+                                                onClick={() => handleDelete(player.id)} // Use new handler
+                                                className="text-sm text-red-300 hover:underline"
                                             >
                                                 Delete Permanently
                                             </button>
                                         </>
                                     ) : (
                                         <button
-                                            onClick={() => removePlayerMutation.mutate(player.id)}
+                                            onClick={() => handleRemove(player.id)} // Use new handler
                                             className="px-2 py-1 text-xs font-medium text-red-700 bg-red-100 rounded hover:bg-red-200"
                                         >
                                             Remove

@@ -141,7 +141,13 @@ public class PlayerService : IPlayerService
     public async Task DeletePlayerPermanentlyAsync(int id)
     {
         var player = await _context.Players.FindAsync(id)
-            ?? throw new KeyNotFoundException("Player not found.");
+                     ?? throw new KeyNotFoundException("Player not found.");
+        
+        // Business Rule: You cannot permanently delete a player who is linked to a user account.
+        if (player.UserId != null)
+        {
+            throw new InvalidOperationException("Cannot permanently delete a player who is linked to a registered user account. Please remove them from the roster instead.");
+        }
 
         // This action permanently removes the player.
         _context.Players.Remove(player);
