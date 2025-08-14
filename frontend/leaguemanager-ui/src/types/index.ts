@@ -31,6 +31,8 @@ export interface PlayerResponseDto {
   name: string;
   teamId: number;
   teamName: string;
+  userId : string | null;
+  userRole: string | null;
 }
 
 export interface MyTeamResponse {
@@ -78,4 +80,11 @@ export interface LeagueConfiguration {
 export interface MyTeamAndConfigResponse {
   myTeam: MyTeamResponse | null;
   config: LeagueConfiguration;
+}
+
+export interface TeamMemberResponse {
+    userId: string;
+    userName: string;
+    fullName: string;
+    role: 'Leader' | 'AssistantLeader' | 'Member';
 }

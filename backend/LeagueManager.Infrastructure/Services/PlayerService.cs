@@ -103,10 +103,38 @@ public class PlayerService : IPlayerService
     public async Task RemovePlayerFromRosterAsync(int id)
     {
         var player = await _context.Players.FindAsync(id)
-            ?? throw new KeyNotFoundException("Player not found.");
+                     ?? throw new KeyNotFoundException("Player not found.");
 
-        // This action only removes the player from a team.
+        var currentUser = _httpContextAccessor.HttpContext?.User 
+                          ?? throw new UnauthorizedAccessException("User context is not available.");
+            
+        var currentUserId = currentUser.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        var isTeamManager = await _context.TeamMemberships
+            .AnyAsync(m => m.TeamId == player.TeamId && m.UserId == currentUserId &&
+                           (m.Role == TeamRole.Leader || m.Role == TeamRole.AssistantLeader));
+
+        if (!currentUser.IsInRole("Admin") && !isTeamManager)
+        {
+            throw new UnauthorizedAccessException("User is not authorized to remove this player.");
+        }
+
+        // Capture the original TeamId before we change it.
+        var originalTeamId = player.TeamId;
         player.TeamId = null;
+
+        if (player.UserId != null)
+        {
+            // Use the originalTeamId to find the correct membership record.
+            var membership = await _context.TeamMemberships
+                .FirstOrDefaultAsync(m => m.UserId == player.UserId && m.TeamId == originalTeamId);
+
+            if (membership != null)
+            {
+                _context.TeamMemberships.Remove(membership);
+            }
+        }
+
         await _context.SaveChangesAsync();
     }
 
@@ -132,10 +160,28 @@ public class PlayerService : IPlayerService
 
     public async Task<IEnumerable<PlayerResponseDto>> GetPlayersForTeamAsync(int teamId)
     {
-        return await _context.Players
+        // This query now joins Players with TeamMemberships to get the role for each player.
+        // This allows us to have a single, unified roster view on the frontend.
+        var players = await _context.Players
             .Where(p => p.TeamId == teamId)
-            .ProjectTo<PlayerResponseDto>(_mapper.ConfigurationProvider)
+            .GroupJoin( // This performs a LEFT JOIN in memory
+                _context.TeamMemberships,
+                player => player.UserId,
+                membership => membership.UserId,
+                (player, memberships) => new { player, membership = memberships.FirstOrDefault() }
+            )
+            .Select(x => new PlayerResponseDto
+            {
+                Id = x.player.Id,
+                Name = x.player.Name,
+                TeamId = x.player.TeamId,
+                TeamName = x.player.Team != null ? x.player.Team.Name : string.Empty,
+                UserId = x.player.UserId,
+                UserRole = x.membership != null ? x.membership.Role.ToString() : null
+            })
             .ToListAsync();
+
+        return players;
     }
 
     public async Task<IEnumerable<PlayerResponseDto>> GetUnassignedPlayersAsync()

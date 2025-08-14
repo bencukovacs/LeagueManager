@@ -94,7 +94,7 @@ public class AuthServiceTests : IDisposable
         var loginDto = new LoginDto { Email = "test@example.com", Password = "Password123!" };
         
         await roleManager.CreateAsync(new IdentityRole("Admin"));
-        var user = new User { UserName = "test@example.com", Email = "test@example.com" };
+        var user = new User {FullName = "Test User", UserName = "test@example.com", Email = "test@example.com" };
         await userManager.CreateAsync(user, "Password123!");
         await userManager.AddToRoleAsync(user, "Admin");
 
@@ -119,7 +119,7 @@ public class AuthServiceTests : IDisposable
         var service = new AuthService(userManager, _mockJwtSettings.Object, context);
         var loginDto = new LoginDto { Email = "test@example.com", Password = "WrongPassword!" };
         
-        var user = new User { UserName = "test@example.com", Email = "test@example.com" };
+        var user = new User {FullName = "Test User", UserName = "test@example.com", Email = "test@example.com" };
         await userManager.CreateAsync(user, "CorrectPassword123!");
 
         // Act

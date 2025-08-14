@@ -57,8 +57,8 @@ public class TeamMembershipServiceTests : IDisposable
         // Arrange
         await using var context = GetDbContext();
         var team = new Team { Id = 1, Name = "Test Team" };
-        var user1 = new User { Id = "user-1", UserName = "User One" };
-        var user2 = new User { Id = "user-2", UserName = "User Two" };
+        var user1 = new User { FullName = "User 1", Id = "user-1", UserName = "User One" };
+        var user2 = new User { FullName = "User 2", Id = "user-2", UserName = "User Two" };
         context.Teams.Add(team);
         context.Users.AddRange(user1, user2);
         context.TeamMemberships.AddRange(
@@ -83,7 +83,7 @@ public class TeamMembershipServiceTests : IDisposable
         // Arrange
         await using var context = GetDbContext();
         var team = new Team { Id = 1, Name = "Test Team" };
-        var user = new User { Id = "user-1", UserName = "User One" };
+        var user = new User { FullName = "User 1", Id = "user-1", UserName = "User One" };
         var membership = new TeamMembership { TeamId = 1, UserId = "user-1", Role = TeamRole.Member };
         context.Teams.Add(team);
         context.Users.Add(user);

@@ -84,7 +84,7 @@ public class TeamServiceTests : IDisposable
     {
         // Arrange
         await using var context = GetDbContext();
-        var user = new User { Id = "user-123", UserName = "testuser" };
+        var user = new User { FullName = "Test User", Id = "user-123", UserName = "testuser" };
         var team1 = new Team { Id = 1, Name = "My Team", Status = TeamStatus.Approved };
         var membership = new TeamMembership { UserId = "user-123", TeamId = 1, Role = TeamRole.Leader };
         context.Users.Add(user);
@@ -114,7 +114,7 @@ public class TeamServiceTests : IDisposable
     {
         // Arrange
         await using var context = GetDbContext();
-        var user = new User { Id = "user-456", UserName = "testmember" };
+        var user = new User { FullName = "User 456", Id = "user-456", UserName = "testmember" };
         var team1 = new Team { Id = 1, Name = "My Team", Status = TeamStatus.Approved };
         var membership = new TeamMembership { UserId = "user-456", TeamId = 1, Role = TeamRole.Member };
         context.Users.Add(user);
@@ -143,7 +143,7 @@ public class TeamServiceTests : IDisposable
     {
         // Arrange
         await using var context = GetDbContext();
-        var user = new User { Id = "user-789", UserName = "testuser" };
+        var user = new User { FullName = "User 789", Id = "user-789", UserName = "testuser" };
         context.Users.Add(user);
         await context.SaveChangesAsync();
 
@@ -212,7 +212,7 @@ public class TeamServiceTests : IDisposable
     {
         // Arrange
         await using var context = GetDbContext();
-        var user = new User { Id = "user-123", UserName = "testuser" };
+        var user = new User { FullName = "User 123", Id = "user-123", UserName = "testuser" };
         var team1 = new Team { Id = 1, Name = "My Team" };
         var team2 = new Team { Id = 2, Name = "Opponent Team" };
         var team3 = new Team { Id = 3, Name = "Other Team" };

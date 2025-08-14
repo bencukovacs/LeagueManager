@@ -28,8 +28,12 @@ public class AuthService : IAuthService
 
     public async Task<IdentityResult> RegisterUserAsync(RegisterDto registerDto)
     {
-        var user = new User { UserName = registerDto.Email, Email = registerDto.Email };
-        
+        var user = new User 
+        { 
+            UserName = registerDto.Email, 
+            Email = registerDto.Email,
+            FullName = $"{registerDto.FirstName} {registerDto.LastName}"
+        };
         // This is a special case where we need two saves, but UserManager handles it.
         // First, create the user.
         var result = await _userManager.CreateAsync(user, registerDto.Password);

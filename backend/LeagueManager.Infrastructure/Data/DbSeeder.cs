@@ -32,6 +32,7 @@ public static class DbSeeder
         {
             var adminUser = new User
             {
+                FullName = "Admin User",
                 UserName = adminEmail,
                 Email = adminEmail,
                 EmailConfirmed = true // Confirm email immediately for the admin

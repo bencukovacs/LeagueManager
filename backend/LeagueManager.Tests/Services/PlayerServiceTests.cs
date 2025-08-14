@@ -126,7 +126,7 @@ public class PlayerServiceTests : IDisposable
   {
     // Arrange
     await using var context = GetDbContext();
-    var user = new User { Id = "leader-user" };
+    var user = new User {FullName = "Test User", Id = "leader-user" };
     var team = new Team { Id = 1, Name = "My Team" };
     var player = new Player { Id = 1, Name = "Test Player", TeamId = 1 };
     var membership = new TeamMembership { UserId = "leader-user", TeamId = 1, Role = TeamRole.Leader };

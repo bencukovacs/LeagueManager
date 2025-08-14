@@ -68,9 +68,9 @@ public class RosterRequestServiceTests : IDisposable
     {
         // Arrange
         await using var context = GetDbContext();
-        var user = new User { Id = "user-123", UserName = "testuser" };
+        var user = new User { FullName = "Test User", Id = "user-123", UserName = "testuser" };
         // We must create the second user in the database to satisfy the foreign key.
-        var anotherUser = new User { Id = "another-user", UserName = "anotheruser" };
+        var anotherUser = new User { FullName = "Test User 2", Id = "another-user", UserName = "anotheruser" };
         var team = new Team { Id = 1, Name = "Test Team" };
         context.Users.AddRange(user, anotherUser); // Add both users
         context.Teams.Add(team);

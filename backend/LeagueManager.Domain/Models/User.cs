@@ -7,5 +7,5 @@ namespace LeagueManager.Domain.Models;
 public class User : IdentityUser
 {
     // Example of a future custom property:
-    // public string? FullName { get; set; }
+    public required string FullName { get; set; }
 }
