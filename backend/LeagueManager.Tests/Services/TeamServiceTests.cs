@@ -236,4 +236,26 @@ public class TeamServiceTests : IDisposable
         Assert.NotNull(result);
         Assert.Equal(2, result.Count);
     }
+    
+    [Fact]
+    public async Task CreateTeamAsync_WhenTeamNameExists_ThrowsInvalidOperationException()
+    {
+        // --- ARRANGE ---
+        // 1. Set up the database with an existing team
+        await using var context = GetDbContext();
+        context.Teams.Add(new Team { Id = 1, Name = "Existing Team" });
+        await context.SaveChangesAsync();
+
+        // 2. Set up a mock user and the service
+        var mockHttpContextAccessor = CreateMockHttpContextAccessor("user-123");
+        var service = new TeamService(context, _mapper, mockHttpContextAccessor.Object, _mockConfigService.Object);
+    
+        // 3. Create a DTO with a duplicate name (case-insensitive)
+        var dto = new CreateTeamDto { Name = "existing team" };
+
+        // --- ACT & ASSERT ---
+        // 4. Verify that the service call throws the correct exception
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.CreateTeamAsync(dto));
+        Assert.Equal("A team with this name already exists.", exception.Message);
+    }
 }

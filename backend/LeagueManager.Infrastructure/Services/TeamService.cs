@@ -48,6 +48,12 @@ public class TeamService : ITeamService
 
     public async Task<TeamResponseDto> CreateTeamAsync(CreateTeamDto teamDto)
     {
+        var nameExists = await _context.Teams.AnyAsync(t => t.Name.ToLower() == teamDto.Name.ToLower());
+        if (nameExists)
+        {
+            throw new InvalidOperationException("A team with this name already exists.");
+        }
+        
         var currentUser = _httpContextAccessor.HttpContext?.User;
         if (currentUser == null)
         {
