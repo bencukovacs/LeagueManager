@@ -91,4 +91,33 @@ public class MyTeamControllerTests
         var returnedFixtures = Assert.IsAssignableFrom<IEnumerable<FixtureResponseDto>>(okResult.Value);
         Assert.Empty(returnedFixtures);
     }
+    
+    [Fact]
+    public async Task LeaveMyTeam_WhenSuccessful_ReturnsNoContent()
+    {
+        // Arrange
+        _mockTeamService.Setup(s => s.LeaveMyTeamAsync()).Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _controller.LeaveMyTeam();
+
+        // Assert
+        Assert.IsType<NoContentResult>(result);
+    }
+
+    [Fact]
+    public async Task LeaveMyTeam_WhenServiceThrowsException_ReturnsBadRequest()
+    {
+        // Arrange
+        var errorMessage = "You are the last manager of this team.";
+        _mockTeamService.Setup(s => s.LeaveMyTeamAsync())
+            .ThrowsAsync(new InvalidOperationException(errorMessage));
+
+        // Act
+        var result = await _controller.LeaveMyTeam();
+
+        // Assert
+        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal(errorMessage, badRequestResult.Value);
+    }
 }

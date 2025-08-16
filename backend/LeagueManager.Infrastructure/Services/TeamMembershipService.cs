@@ -22,7 +22,6 @@ public class TeamMembershipService : ITeamMembershipService
         _httpContextAccessor = httpContextAccessor;
     }
 
-    // --- THIS IS THE FINAL, CORRECTED METHOD ---
     public async Task<IEnumerable<TeamMemberResponseDto>> GetMembersForTeamAsync(int teamId)
     {
         // 1. Fetch the raw data with the necessary includes.
@@ -53,7 +52,7 @@ public class TeamMembershipService : ITeamMembershipService
         {
             throw new UnauthorizedAccessException("Only the Team Leader can change member roles.");
         }
-        
+
         var targetMembership = await _context.TeamMemberships
             .Include(m => m.User)
             .FirstOrDefaultAsync(m => m.TeamId == teamId && m.UserId == memberUserId);

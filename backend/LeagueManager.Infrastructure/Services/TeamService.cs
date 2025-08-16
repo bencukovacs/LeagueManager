@@ -250,4 +250,51 @@ public class TeamService : ITeamService
 
         return fixtures;
     }
+    
+    public async Task LeaveMyTeamAsync()
+    {
+        var currentUserId = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier)
+                            ?? throw new UnauthorizedAccessException("User is not authenticated.");
+
+        var membership = await _context.TeamMemberships
+            .Include(m => m.Team) // We need the team's status
+            .FirstOrDefaultAsync(m => m.UserId == currentUserId);
+
+        if (membership == null || membership.Team == null)
+        {
+            throw new InvalidOperationException("User is not a member of any team.");
+        }
+
+        // Scenario 1: The team is still pending approval
+        if (membership.Team.Status == TeamStatus.PendingApproval)
+        {
+            // If the user is the leader (which they will be if they created it),
+            // leaving means canceling the entire application.
+            if (membership.Role == TeamRole.Leader)
+            {
+                _context.Teams.Remove(membership.Team);
+                // The membership will be deleted automatically due to the database relationship
+            }
+        }
+        // Scenario 2: The team is already approved
+        else
+        {
+            // Business Rule: The last leader cannot leave an approved team.
+            if (membership.Role == TeamRole.Leader)
+            {
+                var otherManagers = await _context.TeamMemberships.AnyAsync(m =>
+                    m.TeamId == membership.TeamId &&
+                    m.UserId != currentUserId &&
+                    (m.Role == TeamRole.Leader || m.Role == TeamRole.AssistantLeader));
+
+                if (!otherManagers)
+                {
+                    throw new InvalidOperationException("You are the last manager of this team. You must transfer leadership before leaving.");
+                }
+            }
+            _context.TeamMemberships.Remove(membership);
+        }
+
+        await _context.SaveChangesAsync();
+    }
 }

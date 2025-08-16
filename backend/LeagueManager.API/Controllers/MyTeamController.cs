@@ -34,4 +34,19 @@ public class MyTeamController : ControllerBase
         var fixtures = await _teamService.GetFixturesForMyTeamAsync();
         return Ok(fixtures);
     }
+    
+    [HttpDelete]
+    public async Task<IActionResult> LeaveMyTeam()
+    {
+        try
+        {
+            await _teamService.LeaveMyTeamAsync();
+            return NoContent(); // Success
+        }
+        catch (InvalidOperationException ex)
+        {
+            // Catches errors like "not on a team" or "last leader cannot leave"
+            return BadRequest(ex.Message);
+        }
+    }
 }

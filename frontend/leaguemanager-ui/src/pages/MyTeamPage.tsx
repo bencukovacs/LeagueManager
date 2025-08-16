@@ -7,6 +7,7 @@ import EditTeamForm from '../features/teams/EditTeamForm';
 import JoinRequestsList from '../features/teams/JoinRequestsList';
 import MyPendingRequests from '../features/me/MyPendingRequests';
 import { useAuth } from '../contexts/AuthContext';
+import LeaveTeamButton from "../features/teams/LeaveTeamButton";
 
 // This fetch function now expects the new, combined response object
 const fetchMyTeamAndConfig = async (): Promise<MyTeamAndConfigResponse | null> => {
@@ -126,6 +127,7 @@ export default function MyTeamPage() {
           </p>
           <p className="text-sm text-gray-500">Your Role: {userRole}</p>
         </div>
+          <LeaveTeamButton teamStatus={team.status as any} />
       </div>
       
       {/* The checklist now gets the minPlayers value from the fetched config */}

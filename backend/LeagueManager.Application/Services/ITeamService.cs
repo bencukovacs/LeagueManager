@@ -16,4 +16,5 @@ public interface ITeamService
     Task<IEnumerable<TeamResponseDto>> GetPendingTeamsAsync();
     Task<MyTeamAndConfigResponseDto> GetMyTeamAndConfigAsync();
     Task<IEnumerable<FixtureResponseDto>> GetFixturesForMyTeamAsync();
+    Task LeaveMyTeamAsync();
 }

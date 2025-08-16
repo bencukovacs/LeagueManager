@@ -258,4 +258,73 @@ public class TeamServiceTests : IDisposable
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.CreateTeamAsync(dto));
         Assert.Equal("A team with this name already exists.", exception.Message);
     }
+    
+    [Fact]
+public async Task LeaveMyTeamAsync_WhenLeaderCancelsPendingTeam_DeletesTeamAndMembership()
+{
+    // Arrange
+    await using var context = GetDbContext();
+    var user = new User { Id = "user-123", FullName = "Test User" };
+    var team = new Team { Id = 1, Name = "Pending Team", Status = TeamStatus.PendingApproval };
+    var membership = new TeamMembership { UserId = "user-123", TeamId = 1, Role = TeamRole.Leader };
+    context.Users.Add(user);
+    context.Teams.Add(team);
+    context.TeamMemberships.Add(membership);
+    await context.SaveChangesAsync();
+
+    var mockHttpContextAccessor = CreateMockHttpContextAccessor("user-123");
+    var service = new TeamService(context, _mapper, mockHttpContextAccessor.Object, _mockConfigService.Object);
+
+    // Act
+    await service.LeaveMyTeamAsync();
+
+    // Assert
+    Assert.Equal(0, await context.Teams.CountAsync());
+    Assert.Equal(0, await context.TeamMemberships.CountAsync());
+}
+
+[Fact]
+public async Task LeaveMyTeamAsync_WhenMemberLeavesApprovedTeam_DeletesMembershipOnly()
+{
+    // Arrange
+    await using var context = GetDbContext();
+    var user = new User { Id = "user-123", FullName = "Test User" };
+    var team = new Team { Id = 1, Name = "Approved Team", Status = TeamStatus.Approved };
+    var membership = new TeamMembership { UserId = "user-123", TeamId = 1, Role = TeamRole.Member };
+    context.Users.Add(user);
+    context.Teams.Add(team);
+    context.TeamMemberships.Add(membership);
+    await context.SaveChangesAsync();
+
+    var mockHttpContextAccessor = CreateMockHttpContextAccessor("user-123");
+    var service = new TeamService(context, _mapper, mockHttpContextAccessor.Object, _mockConfigService.Object);
+
+    // Act
+    await service.LeaveMyTeamAsync();
+
+    // Assert
+    Assert.Equal(1, await context.Teams.CountAsync()); // Team should still exist
+    Assert.Equal(0, await context.TeamMemberships.CountAsync()); // Membership should be gone
+}
+
+[Fact]
+public async Task LeaveMyTeamAsync_WhenLastLeaderTriesToLeaveApprovedTeam_ThrowsException()
+{
+    // Arrange
+    await using var context = GetDbContext();
+    var user = new User { Id = "user-123", FullName = "Test User" };
+    var team = new Team { Id = 1, Name = "Approved Team", Status = TeamStatus.Approved };
+    var membership = new TeamMembership { UserId = "user-123", TeamId = 1, Role = TeamRole.Leader };
+    context.Users.Add(user);
+    context.Teams.Add(team);
+    context.TeamMemberships.Add(membership);
+    await context.SaveChangesAsync();
+
+    var mockHttpContextAccessor = CreateMockHttpContextAccessor("user-123");
+    var service = new TeamService(context, _mapper, mockHttpContextAccessor.Object, _mockConfigService.Object);
+
+    // Act & Assert
+    var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.LeaveMyTeamAsync());
+    Assert.Equal("You are the last manager of this team. You must transfer leadership before leaving.", exception.Message);
+}
 }
