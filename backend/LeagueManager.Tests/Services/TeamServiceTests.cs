@@ -260,71 +260,119 @@ public class TeamServiceTests : IDisposable
     }
     
     [Fact]
-public async Task LeaveMyTeamAsync_WhenLeaderCancelsPendingTeam_DeletesTeamAndMembership()
-{
-    // Arrange
-    await using var context = GetDbContext();
-    var user = new User { Id = "user-123", FullName = "Test User" };
-    var team = new Team { Id = 1, Name = "Pending Team", Status = TeamStatus.PendingApproval };
-    var membership = new TeamMembership { UserId = "user-123", TeamId = 1, Role = TeamRole.Leader };
-    context.Users.Add(user);
-    context.Teams.Add(team);
-    context.TeamMemberships.Add(membership);
-    await context.SaveChangesAsync();
+    public async Task LeaveMyTeamAsync_WhenLeaderCancelsPendingTeam_DeletesTeamAndMembership()
+    {
+        // Arrange
+        await using var context = GetDbContext();
+        var user = new User { Id = "user-123", FullName = "Test User" };
+        var team = new Team { Id = 1, Name = "Pending Team", Status = TeamStatus.PendingApproval };
+        var membership = new TeamMembership { UserId = "user-123", TeamId = 1, Role = TeamRole.Leader };
+        context.Users.Add(user);
+        context.Teams.Add(team);
+        context.TeamMemberships.Add(membership);
+        await context.SaveChangesAsync();
 
-    var mockHttpContextAccessor = CreateMockHttpContextAccessor("user-123");
-    var service = new TeamService(context, _mapper, mockHttpContextAccessor.Object, _mockConfigService.Object);
+        var mockHttpContextAccessor = CreateMockHttpContextAccessor("user-123");
+        var service = new TeamService(context, _mapper, mockHttpContextAccessor.Object, _mockConfigService.Object);
 
-    // Act
-    await service.LeaveMyTeamAsync();
+        // Act
+        await service.LeaveMyTeamAsync();
 
-    // Assert
-    Assert.Equal(0, await context.Teams.CountAsync());
-    Assert.Equal(0, await context.TeamMemberships.CountAsync());
-}
+        // Assert
+        Assert.Equal(0, await context.Teams.CountAsync());
+        Assert.Equal(0, await context.TeamMemberships.CountAsync());
+    }
 
-[Fact]
-public async Task LeaveMyTeamAsync_WhenMemberLeavesApprovedTeam_DeletesMembershipOnly()
-{
-    // Arrange
-    await using var context = GetDbContext();
-    var user = new User { Id = "user-123", FullName = "Test User" };
-    var team = new Team { Id = 1, Name = "Approved Team", Status = TeamStatus.Approved };
-    var membership = new TeamMembership { UserId = "user-123", TeamId = 1, Role = TeamRole.Member };
-    context.Users.Add(user);
-    context.Teams.Add(team);
-    context.TeamMemberships.Add(membership);
-    await context.SaveChangesAsync();
+    [Fact]
+    public async Task LeaveMyTeamAsync_WhenMemberLeavesApprovedTeam_DeletesMembershipOnly()
+    {
+        // Arrange
+        await using var context = GetDbContext();
+        var user = new User { Id = "user-123", FullName = "Test User" };
+        var team = new Team { Id = 1, Name = "Approved Team", Status = TeamStatus.Approved };
+        var membership = new TeamMembership { UserId = "user-123", TeamId = 1, Role = TeamRole.Member };
+        context.Users.Add(user);
+        context.Teams.Add(team);
+        context.TeamMemberships.Add(membership);
+        await context.SaveChangesAsync();
 
-    var mockHttpContextAccessor = CreateMockHttpContextAccessor("user-123");
-    var service = new TeamService(context, _mapper, mockHttpContextAccessor.Object, _mockConfigService.Object);
+        var mockHttpContextAccessor = CreateMockHttpContextAccessor("user-123");
+        var service = new TeamService(context, _mapper, mockHttpContextAccessor.Object, _mockConfigService.Object);
 
-    // Act
-    await service.LeaveMyTeamAsync();
+        // Act
+        await service.LeaveMyTeamAsync();
 
-    // Assert
-    Assert.Equal(1, await context.Teams.CountAsync()); // Team should still exist
-    Assert.Equal(0, await context.TeamMemberships.CountAsync()); // Membership should be gone
-}
+        // Assert
+        Assert.Equal(1, await context.Teams.CountAsync()); // Team should still exist
+        Assert.Equal(0, await context.TeamMemberships.CountAsync()); // Membership should be gone
+    }
 
-[Fact]
-public async Task LeaveMyTeamAsync_WhenLastLeaderTriesToLeaveApprovedTeam_ThrowsException()
-{
-    // Arrange
-    await using var context = GetDbContext();
-    var user = new User { Id = "user-123", FullName = "Test User" };
-    var team = new Team { Id = 1, Name = "Approved Team", Status = TeamStatus.Approved };
-    var membership = new TeamMembership { UserId = "user-123", TeamId = 1, Role = TeamRole.Leader };
-    context.Users.Add(user);
-    context.Teams.Add(team);
-    context.TeamMemberships.Add(membership);
-    await context.SaveChangesAsync();
+    [Fact]
+    public async Task LeaveMyTeamAsync_WhenLastLeaderTriesToLeaveApprovedTeam_ThrowsException()
+    {
+        // Arrange
+        await using var context = GetDbContext();
+        var user = new User { Id = "user-123", FullName = "Test User" };
+        var team = new Team { Id = 1, Name = "Approved Team", Status = TeamStatus.Approved };
+        var membership = new TeamMembership { UserId = "user-123", TeamId = 1, Role = TeamRole.Leader };
+        context.Users.Add(user);
+        context.Teams.Add(team);
+        context.TeamMemberships.Add(membership);
+        await context.SaveChangesAsync();
 
-    var mockHttpContextAccessor = CreateMockHttpContextAccessor("user-123");
-    var service = new TeamService(context, _mapper, mockHttpContextAccessor.Object, _mockConfigService.Object);
+        var mockHttpContextAccessor = CreateMockHttpContextAccessor("user-123");
+        var service = new TeamService(context, _mapper, mockHttpContextAccessor.Object, _mockConfigService.Object);
 
-    // Act & Assert
-    var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.LeaveMyTeamAsync());
-    Assert.Equal("You are the last manager of this team. You must transfer leadership before leaving.", exception.Message);
-}
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.LeaveMyTeamAsync());
+        Assert.Equal("You are the last manager of this team. You must transfer leadership before leaving.", exception.Message);
+    }
+
+    [Fact]
+    public async Task DisbandMyTeamAsync_WhenLeaderDisbandsApprovedTeam_DeletesTeamAndMemberships()
+    {
+        // Arrange
+        await using var context = GetDbContext();
+        var user = new User { Id = "leader-user", FullName = "Test Leader" };
+        var team = new Team { Id = 1, Name = "Approved Team", Status = TeamStatus.Approved };
+        var membership = new TeamMembership { UserId = "leader-user", TeamId = 1, Role = TeamRole.Leader };
+        var player = new Player { Name = "Test Player", TeamId = 1 };
+        context.Users.Add(user);
+        context.Teams.Add(team);
+        context.TeamMemberships.Add(membership);
+        context.Players.Add(player);
+        await context.SaveChangesAsync();
+
+        var mockHttpContextAccessor = CreateMockHttpContextAccessor("leader-user");
+        var service = new TeamService(context, _mapper, mockHttpContextAccessor.Object, _mockConfigService.Object);
+
+        // Act
+        await service.DisbandMyTeamAsync();
+
+        // Assert
+        Assert.Equal(0, await context.Teams.CountAsync());
+        Assert.Equal(0, await context.TeamMemberships.CountAsync());
+        var playerInDb = await context.Players.FirstAsync();
+        Assert.Null(playerInDb.TeamId); // Verify player was soft-deleted
+    }
+
+    [Fact]
+    public async Task DisbandMyTeamAsync_WhenNotLeader_ThrowsUnauthorizedAccessException()
+    {
+        // Arrange
+        await using var context = GetDbContext();
+        var user = new User { Id = "member-user", FullName = "Test Member" };
+        var team = new Team { Id = 1, Name = "Approved Team", Status = TeamStatus.Approved };
+        var membership = new TeamMembership { UserId = "member-user", TeamId = 1, Role = TeamRole.Member };
+        context.Users.Add(user);
+        context.Teams.Add(team);
+        context.TeamMemberships.Add(membership);
+        await context.SaveChangesAsync();
+
+        var mockHttpContextAccessor = CreateMockHttpContextAccessor("member-user");
+        var service = new TeamService(context, _mapper, mockHttpContextAccessor.Object, _mockConfigService.Object);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.DisbandMyTeamAsync());
+    }
 }

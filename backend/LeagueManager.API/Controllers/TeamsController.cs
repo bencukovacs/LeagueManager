@@ -29,7 +29,7 @@ public class TeamsController : ControllerBase
     }
 
     [HttpGet("all")]
-    [Authorize(Roles = "Admin")]
+    [Authorize]
     public async Task<IActionResult> GetAllTeamsForAdmin()
     {
         return Ok(await _teamService.GetAllTeamsForAdminAsync());

@@ -265,15 +265,27 @@ public class TeamService : ITeamService
             throw new InvalidOperationException("User is not a member of any team.");
         }
 
-        // Scenario 1: The team is still pending approval
         if (membership.Team.Status == TeamStatus.PendingApproval)
         {
-            // If the user is the leader (which they will be if they created it),
-            // leaving means canceling the entire application.
+            // Any member leaving a pending team triggers a full cancellation if they are the leader.
             if (membership.Role == TeamRole.Leader)
             {
+                var roster = await _context.Players
+                    .Where(p => p.TeamId == membership.TeamId)
+                    .ToListAsync();
+
+                foreach (var player in roster)
+                {
+                    if (player.UserId == null)
+                    {
+                        _context.Players.Remove(player);
+                    }
+                    else
+                    {
+                        player.TeamId = null;
+                    }
+                }
                 _context.Teams.Remove(membership.Team);
-                // The membership will be deleted automatically due to the database relationship
             }
         }
         // Scenario 2: The team is already approved
@@ -292,8 +304,49 @@ public class TeamService : ITeamService
                     throw new InvalidOperationException("You are the last manager of this team. You must transfer leadership before leaving.");
                 }
             }
+            // For any role (Member, Assistant, or a Leader who is NOT the last one), just remove the membership.
+            // The associated player will be detached in the next step.
             _context.TeamMemberships.Remove(membership);
         }
+
+        // Detach the player profile for any user leaving an approved team
+        var playerProfile = await _context.Players.FirstOrDefaultAsync(p => p.UserId == currentUserId);
+        if (playerProfile != null)
+        {
+            playerProfile.TeamId = null;
+        }
+
+        await _context.SaveChangesAsync();
+    }
+    
+    public async Task DisbandMyTeamAsync()
+    {
+        var currentUserId = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier)
+                            ?? throw new UnauthorizedAccessException("User is not authenticated.");
+
+        var membership = await _context.TeamMemberships
+            .Include(m => m.Team) // We need the team's status
+            .FirstOrDefaultAsync(m => m.UserId == currentUserId);
+
+        if (membership?.Role != TeamRole.Leader || membership.Team?.Status != TeamStatus.Approved)
+        {
+            throw new UnauthorizedAccessException("Only the leader of an approved team can disband it.");
+        }
+
+        var team = membership.Team;
+        var roster = await _context.Players.Where(p => p.TeamId == team.Id).ToListAsync();
+        var allMemberships = await _context.TeamMemberships.Where(m => m.TeamId == team.Id).ToListAsync();
+
+        // Soft-delete all players
+        foreach (var player in roster)
+        {
+            player.TeamId = null;
+        }
+
+        // Delete all memberships
+        _context.TeamMemberships.RemoveRange(allMemberships);
+        // Delete the team
+        _context.Teams.Remove(team);
 
         await _context.SaveChangesAsync();
     }

@@ -12,7 +12,7 @@ namespace LeagueManager.Infrastructure.Services;
 
 public class RosterRequestService : IRosterRequestService
 {
-    private const string _notAuthedMsg = "User is not authenticated.";
+    private const string NotAuthedMsg = "User is not authenticated.";
     private readonly LeagueDbContext _context;
     private readonly IMapper _mapper;
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -27,15 +27,7 @@ public class RosterRequestService : IRosterRequestService
     public async Task<RosterRequestResponseDto> CreateJoinRequestAsync(int teamId)
     {
         var currentUserId = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier)
-            ?? throw new UnauthorizedAccessException(_notAuthedMsg);
-
-        var team = await _context.Teams.FindAsync(teamId)
-            ?? throw new ArgumentException("Team not found.");
-
-        if (team.Status != TeamStatus.Approved)
-        {
-            throw new InvalidOperationException("You can only request to join approved teams.");
-        }
+            ?? throw new UnauthorizedAccessException(NotAuthedMsg);
 
         // Check if a pending request from this user to this team already exists.
         var existingRequest = await _context.RosterRequests.AnyAsync(r =>
@@ -66,7 +58,7 @@ public class RosterRequestService : IRosterRequestService
     public async Task<IEnumerable<RosterRequestResponseDto>> GetPendingJoinRequestsForMyTeamAsync()
     {
         var currentUserId = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier)
-            ?? throw new UnauthorizedAccessException(_notAuthedMsg);
+            ?? throw new UnauthorizedAccessException(NotAuthedMsg);
 
         var teamMembership = await _context.TeamMemberships.FirstOrDefaultAsync(m => m.UserId == currentUserId && (m.Role == TeamRole.Leader || m.Role == TeamRole.AssistantLeader));
         if (teamMembership == null)
@@ -83,7 +75,7 @@ public class RosterRequestService : IRosterRequestService
     public async Task<TeamMembership> ApproveJoinRequestAsync(int requestId)
     {
         var currentUserId = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier)
-            ?? throw new UnauthorizedAccessException(_notAuthedMsg);
+            ?? throw new UnauthorizedAccessException(NotAuthedMsg);
 
         var request = await _context.RosterRequests.FindAsync(requestId)
             ?? throw new ArgumentException("Request not found.");
@@ -134,7 +126,7 @@ public class RosterRequestService : IRosterRequestService
     public async Task RejectJoinRequestAsync(int requestId)
     {
         var currentUserId = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier)
-            ?? throw new UnauthorizedAccessException(_notAuthedMsg);
+            ?? throw new UnauthorizedAccessException(NotAuthedMsg);
 
         var request = await _context.RosterRequests.FindAsync(requestId)
             ?? throw new ArgumentException("Request not found.");
@@ -155,7 +147,7 @@ public class RosterRequestService : IRosterRequestService
     public async Task<IEnumerable<RosterRequestResponseDto>> GetMyPendingRequestsAsync()
     {
         var currentUserId = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier)
-            ?? throw new UnauthorizedAccessException(_notAuthedMsg);
+            ?? throw new UnauthorizedAccessException(NotAuthedMsg);
 
         return await _context.RosterRequests
             .Where(r => r.UserId == currentUserId &&
@@ -167,7 +159,7 @@ public class RosterRequestService : IRosterRequestService
     public async Task CancelMyRequestAsync(int requestId)
     {
         var currentUserId = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier)
-            ?? throw new UnauthorizedAccessException(_notAuthedMsg);
+            ?? throw new UnauthorizedAccessException(NotAuthedMsg);
 
         var request = await _context.RosterRequests.FindAsync(requestId)
             ?? throw new ArgumentException("Request not found.");

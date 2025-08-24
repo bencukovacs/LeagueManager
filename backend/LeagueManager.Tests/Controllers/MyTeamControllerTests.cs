@@ -2,6 +2,7 @@ using Moq;
 using LeagueManager.API.Controllers;
 using LeagueManager.Application.Services;
 using LeagueManager.Application.Dtos;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LeagueManager.Tests.Controllers;
@@ -119,5 +120,36 @@ public class MyTeamControllerTests
         // Assert
         var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
         Assert.Equal(errorMessage, badRequestResult.Value);
+    }
+    
+    [Fact]
+    public async Task DisbandMyTeam_WhenSuccessful_ReturnsNoContent()
+    {
+        // Arrange
+        _mockTeamService.Setup(s => s.DisbandMyTeamAsync()).Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _controller.DisbandMyTeam();
+
+        // Assert
+        Assert.IsType<NoContentResult>(result);
+    }
+
+    [Fact]
+    public async Task DisbandMyTeam_WhenUnauthorized_ReturnsForbidden()
+    {
+        // Arrange
+        var errorMessage = "Only the leader of an approved team can disband it.";
+        _mockTeamService.Setup(s => s.DisbandMyTeamAsync())
+            .ThrowsAsync(new UnauthorizedAccessException(errorMessage));
+
+        // Act
+        var result = await _controller.DisbandMyTeam();
+
+        // Assert
+        var objectResult = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(StatusCodes.Status403Forbidden, objectResult.StatusCode);
+        Assert.NotNull(objectResult.Value);
+        Assert.Equal(errorMessage, objectResult.Value.GetType().GetProperty("Message")?.GetValue(objectResult.Value, null));
     }
 }

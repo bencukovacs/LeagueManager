@@ -49,4 +49,18 @@ public class MyTeamController : ControllerBase
             return BadRequest(ex.Message);
         }
     }
+    
+    [HttpDelete("disband")]
+    public async Task<IActionResult> DisbandMyTeam()
+    {
+        try
+        {
+            await _teamService.DisbandMyTeamAsync();
+            return NoContent();
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { Message = ex.Message });
+        }
+    }
 }

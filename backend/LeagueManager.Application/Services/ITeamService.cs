@@ -17,4 +17,5 @@ public interface ITeamService
     Task<MyTeamAndConfigResponseDto> GetMyTeamAndConfigAsync();
     Task<IEnumerable<FixtureResponseDto>> GetFixturesForMyTeamAsync();
     Task LeaveMyTeamAsync();
+    Task DisbandMyTeamAsync();
 }
