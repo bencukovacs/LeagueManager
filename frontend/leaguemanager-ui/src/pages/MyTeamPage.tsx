@@ -9,14 +9,19 @@ import MyPendingRequests from '../features/me/MyPendingRequests';
 import { useAuth } from '../contexts/AuthContext';
 import LeaveTeamButton from "../features/teams/LeaveTeamButton";
 import DisbandTeamButton from '../features/teams/DisbandTeamButton';
+import { AxiosError } from 'axios';
 
 // This fetch function now expects the new, combined response object
 const fetchMyTeamAndConfig = async (): Promise<MyTeamAndConfigResponse | null> => {
   try {
     const { data } = await apiClient.get('/my-team');
     return data;
-  } catch (error) {
-    return null;
+  } catch (err) { // 2. The error is now typed
+      const error = err as AxiosError;
+      if (error.response?.status === 404) {
+          return null;
+      }
+      throw error;
   }
 };
 
@@ -131,7 +136,7 @@ export default function MyTeamPage() {
         </div>
           <div className="flex space-x-2">
               {isLeader && team.status === 'Approved' && <DisbandTeamButton />}
-              <LeaveTeamButton teamStatus={team.status as any} />
+              <LeaveTeamButton teamStatus={team.status as 'PendingApproval' | 'Approved'} />
           </div>
       </div>
       
@@ -159,6 +164,7 @@ export default function MyTeamPage() {
               roster={roster || []} 
               isLoading={isRosterLoading}
               isAdmin={isAdmin}
+              currentUserRole={userRole}
             />
             <EditTeamForm team={team} />
           </div>

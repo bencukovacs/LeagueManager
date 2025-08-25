@@ -68,7 +68,7 @@ public class TeamService : ITeamService
 
         if (!currentUser.IsInRole("Admin"))
         {
-            // Check if a non-admin user already manages a team.
+            // Rule 1: Check if a non-admin user already manages a team.
             var userAlreadyManagesTeam = await _context.TeamMemberships
                 .AnyAsync(m => m.UserId == currentUserId && (m.Role == TeamRole.Leader || m.Role == TeamRole.AssistantLeader));
 
@@ -76,6 +76,14 @@ public class TeamService : ITeamService
             {
                 // If they do, throw an exception to prevent them from creating another one.
                 throw new InvalidOperationException("You already manage a team and cannot create another one.");
+            }
+            
+            // Rule 2: Check if the user has a pending request to join another team.
+            var hasPendingJoinRequest = await _context.RosterRequests
+                .AnyAsync(r => r.UserId == currentUserId && r.Status == RosterRequestStatus.PendingLeaderApproval);
+            if (hasPendingJoinRequest)
+            {
+                throw new InvalidOperationException("You cannot create a team while you have a pending request to join another.");
             }
         }
 

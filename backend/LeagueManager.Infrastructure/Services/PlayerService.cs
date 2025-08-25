@@ -110,13 +110,43 @@ public class PlayerService : IPlayerService
             
         var currentUserId = currentUser.FindFirstValue(ClaimTypes.NameIdentifier);
 
-        var isTeamManager = await _context.TeamMemberships
-            .AnyAsync(m => m.TeamId == player.TeamId && m.UserId == currentUserId &&
-                           (m.Role == TeamRole.Leader || m.Role == TeamRole.AssistantLeader));
-
-        if (!currentUser.IsInRole("Admin") && !isTeamManager)
+        // Rule 1: An Admin can always remove a player.
+        if (!currentUser.IsInRole("Admin"))
         {
-            throw new UnauthorizedAccessException("User is not authorized to remove this player.");
+            // Admin logic remains the same.
+            // Find the membership of the user PERFORMING the action.
+            var actorMembership = await _context.TeamMemberships
+                .FirstOrDefaultAsync(m => m.TeamId == player.TeamId && m.UserId == currentUserId);
+
+            if (actorMembership == null)
+            {
+                throw new UnauthorizedAccessException("You are not a member of this team.");
+            }
+            
+            // An assistant cannot remove themselves.
+            if (player.UserId == currentUserId)
+            {
+                throw new InvalidOperationException("You must use the 'Leave Team' feature to remove yourself.");
+            }
+
+            // Rule 2: An Assistant Leader has limited permissions.
+            if (actorMembership.Role == TeamRole.AssistantLeader)
+            {
+                // Find the membership of the player being removed.
+                var targetMembership = await _context.TeamMemberships
+                    .FirstOrDefaultAsync(m => m.TeamId == player.TeamId && m.UserId == player.UserId);
+
+                // An assistant cannot remove the leader.
+                if (targetMembership?.Role == TeamRole.Leader)
+                {
+                    throw new UnauthorizedAccessException("An Assistant Leader cannot remove the Team Leader.");
+                }
+            }
+            // Rule 3: Only a Leader or Assistant Leader can remove players.
+            else if (actorMembership.Role != TeamRole.Leader)
+            {
+                throw new UnauthorizedAccessException("You do not have permission to remove players from this roster.");
+            }
         }
 
         // Capture the original TeamId before we change it.
@@ -201,7 +231,7 @@ public class PlayerService : IPlayerService
     public async Task<PlayerResponseDto?> AssignPlayerToTeamAsync(int playerId, int teamId)
     {
         var player = await _context.Players.FindAsync(playerId);
-        var teamExists = await _context.Teams.AnyAsync(t => t.Id == teamId && t.Status == TeamStatus.Approved);
+        var teamExists = await _context.Teams.AnyAsync(t => t.Id == teamId);
 
         if (player == null || !teamExists)
         {

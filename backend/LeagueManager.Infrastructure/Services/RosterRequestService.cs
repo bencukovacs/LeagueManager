@@ -27,18 +27,29 @@ public class RosterRequestService : IRosterRequestService
     public async Task<RosterRequestResponseDto> CreateJoinRequestAsync(int teamId)
     {
         var currentUserId = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier)
-            ?? throw new UnauthorizedAccessException(NotAuthedMsg);
+                            ?? throw new UnauthorizedAccessException("User is not authenticated.");
 
-        // Check if a pending request from this user to this team already exists.
-        var existingRequest = await _context.RosterRequests.AnyAsync(r =>
+        var team = await _context.Teams.FindAsync(teamId)
+                   ?? throw new ArgumentException("Team not found.");
+            
+        // Rule 1: Check if the user already has a pending request for ANY team.
+        var existingRequest = await _context.RosterRequests.AnyAsync(r => 
             r.UserId == currentUserId &&
-            r.TeamId == teamId &&
             r.Status == RosterRequestStatus.PendingLeaderApproval);
-
         if (existingRequest)
         {
-            // If it exists, throw an error.
-            throw new InvalidOperationException("You already have a pending request to join this team.");
+            throw new InvalidOperationException("You already have a pending request to join a team and cannot send another.");
+        }
+
+        // Rule 2: Check if the user is the leader of a different PENDING team.
+        var managesPendingTeam = await _context.TeamMemberships
+            .AnyAsync(m => m.UserId == currentUserId && 
+                           m.Role == TeamRole.Leader &&
+                           m.Team != null &&
+                           m.Team.Status == TeamStatus.PendingApproval);
+        if (managesPendingTeam)
+        {
+            throw new InvalidOperationException("You cannot join a team while your own team application is pending approval.");
         }
 
         var request = new RosterRequest

@@ -93,4 +93,56 @@ public class RosterRequestServiceTests : IDisposable
         Assert.NotNull(result);
         Assert.Equal(2, result.Count);
     }
+    
+    [Fact]
+    public async Task CreateJoinRequestAsync_WhenUserHasAnotherPendingRequest_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        await using var context = GetDbContext();
+        var user = new User { Id = "user-123", FullName = "Test User" };
+        var team1 = new Team { Id = 1, Name = "Team A" };
+        var team2 = new Team { Id = 2, Name = "Team B" };
+        context.Users.Add(user);
+        context.Teams.AddRange(team1, team2);
+        
+        // Create an existing pending request to Team A
+        context.RosterRequests.Add(new RosterRequest 
+        { 
+            UserId = "user-123", 
+            TeamId = 1, 
+            Status = RosterRequestStatus.PendingLeaderApproval 
+        });
+        await context.SaveChangesAsync();
+
+        var mockHttpContextAccessor = CreateMockHttpContextAccessor("user-123");
+        var service = new RosterRequestService(context, _mapper, mockHttpContextAccessor.Object);
+
+        // Act & Assert
+        // Try to create a new request to Team B
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.CreateJoinRequestAsync(2));
+        Assert.Equal("You already have a pending request to join a team and cannot send another.", exception.Message);
+    }
+
+    [Fact]
+    public async Task CreateJoinRequestAsync_WhenUserManagesPendingTeam_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        await using var context = GetDbContext();
+        var user = new User { Id = "user-123", FullName = "Test User" };
+        var pendingTeam = new Team { Id = 1, Name = "My Pending Team", Status = TeamStatus.PendingApproval };
+        var approvedTeam = new Team { Id = 2, Name = "Approved Team", Status = TeamStatus.Approved };
+        var membership = new TeamMembership { UserId = "user-123", TeamId = 1, Role = TeamRole.Leader };
+        context.Users.Add(user);
+        context.Teams.AddRange(pendingTeam, approvedTeam);
+        context.TeamMemberships.Add(membership);
+        await context.SaveChangesAsync();
+
+        var mockHttpContextAccessor = CreateMockHttpContextAccessor("user-123");
+        var service = new RosterRequestService(context, _mapper, mockHttpContextAccessor.Object);
+
+        // Act & Assert
+        // Try to join the approved team
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.CreateJoinRequestAsync(2));
+        Assert.Equal("You cannot join a team while your own team application is pending approval.", exception.Message);
+    }
 }

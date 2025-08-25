@@ -375,4 +375,32 @@ public class TeamServiceTests : IDisposable
         // Act & Assert
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.DisbandMyTeamAsync());
     }
+    
+    [Fact]
+    public async Task CreateTeamAsync_WhenUserHasPendingJoinRequest_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        await using var context = GetDbContext();
+        var user = new User { Id = "user-123", FullName = "Test User" };
+        var team = new Team { Id = 1, Name = "Another Team" };
+        context.Users.Add(user);
+        context.Teams.Add(team);
+
+        // Create a pending join request for the user
+        context.RosterRequests.Add(new RosterRequest 
+        { 
+            UserId = "user-123", 
+            TeamId = 1, 
+            Status = RosterRequestStatus.PendingLeaderApproval 
+        });
+        await context.SaveChangesAsync();
+
+        var mockHttpContextAccessor = CreateMockHttpContextAccessor("user-123");
+        var service = new TeamService(context, _mapper, mockHttpContextAccessor.Object, _mockConfigService.Object);
+        var dto = new CreateTeamDto { Name = "New Team" };
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.CreateTeamAsync(dto));
+        Assert.Equal("You cannot create a team while you have a pending request to join another.", exception.Message);
+    }
 }

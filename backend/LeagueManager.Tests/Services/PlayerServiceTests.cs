@@ -153,7 +153,7 @@ public class PlayerServiceTests : IDisposable
   {
     // Arrange
     await using var context = GetDbContext();
-    var team = new Team { Id = 1, Name = "Team A", Status = TeamStatus.Approved };
+    var team = new Team { Id = 1, Name = "Team A", Status = TeamStatus.PendingApproval };
     var player = new Player { Id = 1, Name = "Free Agent", TeamId = null };
     context.Teams.Add(team);
     context.Players.Add(player);

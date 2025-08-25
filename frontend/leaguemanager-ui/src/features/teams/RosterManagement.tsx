@@ -26,12 +26,17 @@ interface RosterManagementProps {
     roster: PlayerResponseDto[];
     isLoading: boolean;
     isAdmin: boolean;
+    currentUserRole: 'Leader' | 'AssistantLeader' | 'Member'; // New prop
 }
 
-export default function RosterManagement({ teamId, roster, isLoading, isAdmin }: RosterManagementProps) {
+export default function RosterManagement({ teamId, roster, isLoading, isAdmin, currentUserRole }: RosterManagementProps) {
     const queryClient = useQueryClient();
     const [newPlayerName, setNewPlayerName] = useState('');
     const [error, setError] = useState<string | null>(null);
+
+    // Calculate state for validation
+    const isLeader = currentUserRole === 'Leader';
+    const hasAssistantLeader = roster.some(p => p.userRole === 'AssistantLeader');
 
     const addPlayerMutation = useMutation({
         mutationFn: addPlayer,
@@ -71,6 +76,9 @@ export default function RosterManagement({ teamId, roster, isLoading, isAdmin }:
             queryClient.invalidateQueries({ queryKey: ['roster'] });
             queryClient.invalidateQueries({ queryKey: ['myTeam'] });
         },
+        onError: (err: AxiosError<{ message: string }>) => {
+            setError(err.response?.data?.message || 'Failed to update role.');
+        }
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -80,6 +88,11 @@ export default function RosterManagement({ teamId, roster, isLoading, isAdmin }:
     };
 
     const handleRoleChange = (userId: string, newRole: string) => {
+        if (newRole === 'Leader') {
+            if (!window.confirm('Are you sure you want to transfer leadership? You will become an Assistant Leader.')) {
+                return; // Abort if user cancels
+            }
+        }
         const roleMap = { 'Leader': 0, 'AssistantLeader': 1, 'Member': 2 };
         const newRoleValue = roleMap[newRole as keyof typeof roleMap];
         updateRoleMutation.mutate({ teamId, userId, newRole: newRoleValue });
@@ -132,11 +145,24 @@ export default function RosterManagement({ teamId, roster, isLoading, isAdmin }:
                                         <select
                                             value={player.userRole}
                                             onChange={(e) => handleRoleChange(player.userId!, e.target.value)}
-                                            className="p-1 text-sm border rounded bg-sky-700"
-                                            disabled={updateRoleMutation.isPending}
+                                            className="p-1 text-sm border rounded bg-sky-700 disabled:bg-gray-500 disabled:text-gray-400"
+                                            // --- THIS IS THE NEW LOGIC ---
+                                            disabled={!isLeader || updateRoleMutation.isPending}
                                         >
-                                            <option value="Leader">Leader</option>
-                                            <option value="AssistantLeader">Assistant Leader</option>
+                                            <option
+                                                value="Leader"
+                                                // Only enable for the current Assistant Leader
+                                                disabled={player.userRole !== 'AssistantLeader'}
+                                            >
+                                                Leader
+                                            </option>
+                                            <option
+                                                value="AssistantLeader"
+                                                // Disable if an assistant already exists (unless it's this player)
+                                                disabled={hasAssistantLeader && player.userRole !== 'AssistantLeader'}
+                                            >
+                                                Assistant Leader
+                                            </option>
                                             <option value="Member">Member</option>
                                         </select>
                                     )}
@@ -144,13 +170,13 @@ export default function RosterManagement({ teamId, roster, isLoading, isAdmin }:
                                     {isAdmin ? (
                                         <>
                                             <button
-                                                onClick={() => handleRemove(player.id)} // Use new handler
+                                                onClick={() => handleRemove(player.id)}
                                                 className="text-sm text-yellow-200 hover:underline"
                                             >
                                                 Remove from Roster
                                             </button>
                                             <button
-                                                onClick={() => handleDelete(player.id)} // Use new handler
+                                                onClick={() => handleDelete(player.id)}
                                                 className="text-sm text-red-300 hover:underline"
                                             >
                                                 Delete Permanently
@@ -158,7 +184,7 @@ export default function RosterManagement({ teamId, roster, isLoading, isAdmin }:
                                         </>
                                     ) : (
                                         <button
-                                            onClick={() => handleRemove(player.id)} // Use new handler
+                                            onClick={() => handleRemove(player.id)}
                                             className="px-2 py-1 text-xs font-medium text-red-700 bg-red-100 rounded hover:bg-red-200"
                                         >
                                             Remove
