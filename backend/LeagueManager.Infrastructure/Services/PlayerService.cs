@@ -235,10 +235,27 @@ public class PlayerService : IPlayerService
 
         if (player == null || !teamExists)
         {
-            return null; // Or throw an exception if you prefer
+            return null;
         }
 
         player.TeamId = teamId;
+
+        if (player.UserId != null)
+        {
+            var membershipExists = await _context.TeamMemberships
+                .AnyAsync(m => m.UserId == player.UserId && m.TeamId == teamId);
+
+            if (!membershipExists)
+            {
+                var newMembership = new TeamMembership
+                {
+                    UserId = player.UserId,
+                    TeamId = teamId,
+                    Role = TeamRole.Member
+                };
+                _context.TeamMemberships.Add(newMembership);
+            }
+        }
         await _context.SaveChangesAsync();
 
         return await GetPlayerByIdAsync(playerId);

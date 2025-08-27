@@ -8,17 +8,18 @@ import { AxiosError } from 'axios';
 const addPlayer = async ({ teamId, name }: { teamId: number; name: string }) => {
     await apiClient.post('/players', { name, teamId });
 };
-
 const removePlayerFromRoster = async (playerId: number) => {
     await apiClient.patch(`/players/${playerId}/remove-from-roster`);
 };
-
 const deletePlayerPermanently = async (playerId: number) => {
     await apiClient.delete(`/players/${playerId}`);
 };
-
 const updateMemberRole = async ({ teamId, userId, newRole }: { teamId: number; userId: string; newRole: number }) => {
     await apiClient.put(`/teams/${teamId}/members/${userId}/role`, { newRole });
+};
+// NEW: API function for demoting
+const demoteMember = async ({ teamId, userId }: { teamId: number; userId: string; }) => {
+    await apiClient.patch(`/teams/${teamId}/members/${userId}/demote`);
 };
 
 interface RosterManagementProps {
@@ -26,7 +27,7 @@ interface RosterManagementProps {
     roster: PlayerResponseDto[];
     isLoading: boolean;
     isAdmin: boolean;
-    currentUserRole: 'Leader' | 'AssistantLeader' | 'Member'; // New prop
+    currentUserRole: 'Leader' | 'AssistantLeader' | 'Member';
 }
 
 export default function RosterManagement({ teamId, roster, isLoading, isAdmin, currentUserRole }: RosterManagementProps) {
@@ -34,10 +35,9 @@ export default function RosterManagement({ teamId, roster, isLoading, isAdmin, c
     const [newPlayerName, setNewPlayerName] = useState('');
     const [error, setError] = useState<string | null>(null);
 
-    // Calculate state for validation
     const isLeader = currentUserRole === 'Leader';
-    const hasAssistantLeader = roster.some(p => p.userRole === 'AssistantLeader');
 
+    // Mutations
     const addPlayerMutation = useMutation({
         mutationFn: addPlayer,
         onSuccess: () => {
@@ -49,7 +49,6 @@ export default function RosterManagement({ teamId, roster, isLoading, isAdmin, c
             setError(err.response?.data?.message || 'Failed to add player.');
         }
     });
-
     const removePlayerMutation = useMutation({
         mutationFn: removePlayerFromRoster,
         onSuccess: () => {
@@ -59,7 +58,6 @@ export default function RosterManagement({ teamId, roster, isLoading, isAdmin, c
             setError(err.response?.data?.message || 'Failed to remove player.');
         }
     });
-
     const deletePlayerMutation = useMutation({
         mutationFn: deletePlayerPermanently,
         onSuccess: () => {
@@ -69,7 +67,6 @@ export default function RosterManagement({ teamId, roster, isLoading, isAdmin, c
             setError(err.response?.data?.message || 'Failed to permanently delete player.');
         }
     });
-
     const updateRoleMutation = useMutation({
         mutationFn: updateMemberRole,
         onSuccess: () => {
@@ -80,33 +77,36 @@ export default function RosterManagement({ teamId, roster, isLoading, isAdmin, c
             setError(err.response?.data?.message || 'Failed to update role.');
         }
     });
+    // NEW: Mutation for demoting
+    const demoteMutation = useMutation({
+        mutationFn: demoteMember,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['roster'] });
+        }
+    });
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!newPlayerName.trim()) return;
         addPlayerMutation.mutate({ teamId, name: newPlayerName });
     };
-
-    const handleRoleChange = (userId: string, newRole: string) => {
-        if (newRole === 'Leader') {
-            if (!window.confirm('Are you sure you want to transfer leadership? You will become an Assistant Leader.')) {
-                return; // Abort if user cancels
-            }
-        }
-        const roleMap = { 'Leader': 0, 'AssistantLeader': 1, 'Member': 2 };
-        const newRoleValue = roleMap[newRole as keyof typeof roleMap];
-        updateRoleMutation.mutate({ teamId, userId, newRole: newRoleValue });
-    };
-
     const handleRemove = (playerId: number) => {
         if (window.confirm('Are you sure you want to remove this player from the roster?')) {
             removePlayerMutation.mutate(playerId);
         }
     };
-
     const handleDelete = (playerId: number) => {
         if (window.confirm('Are you sure you want to PERMANENTLY DELETE this player? This action cannot be undone.')) {
             deletePlayerMutation.mutate(playerId);
+        }
+    };
+    // NEW: Specific handlers for role changes
+    const handleMakeAssistant = (userId: string) => {
+        updateRoleMutation.mutate({ teamId, userId, newRole: 1 }); // 1 = AssistantLeader
+    };
+    const handleHandoverLeadership = (userId: string) => {
+        if (window.confirm('Are you sure you want to transfer leadership? You will become an Assistant Leader.')) {
+            updateRoleMutation.mutate({ teamId, userId, newRole: 0 }); // 0 = Leader
         }
     };
 
@@ -139,54 +139,29 @@ export default function RosterManagement({ teamId, roster, isLoading, isAdmin, c
                     {roster.map((player) => (
                         <li key={player.id} className="p-2 bg-sky-500 border rounded">
                             <div className="flex justify-between items-center">
-                                <span>{player.name}</span>
-                                <div className="flex items-center space-x-3">
-                                    {player.userRole && player.userId && (
-                                        <select
-                                            value={player.userRole}
-                                            onChange={(e) => handleRoleChange(player.userId!, e.target.value)}
-                                            className="p-1 text-sm border rounded bg-sky-700 disabled:bg-gray-500 disabled:text-gray-400"
-                                            // --- THIS IS THE NEW LOGIC ---
-                                            disabled={!isLeader || updateRoleMutation.isPending}
-                                        >
-                                            <option
-                                                value="Leader"
-                                                // Only enable for the current Assistant Leader
-                                                disabled={player.userRole !== 'AssistantLeader'}
-                                            >
-                                                Leader
-                                            </option>
-                                            <option
-                                                value="AssistantLeader"
-                                                // Disable if an assistant already exists (unless it's this player)
-                                                disabled={hasAssistantLeader && player.userRole !== 'AssistantLeader'}
-                                            >
-                                                Assistant Leader
-                                            </option>
-                                            <option value="Member">Member</option>
-                                        </select>
+                                <div className="flex flex-col">
+                                    <span>{player.name}</span>
+                                    {player.userRole && <span className="text-xs text-gray-200">{player.userRole}</span>}
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                    {/* --- THIS IS THE NEW BUTTON-BASED UI --- */}
+                                    {isLeader && player.userRole === 'Member' && (
+                                        <button onClick={() => handleMakeAssistant(player.userId!)} className="text-sm text-blue-200 hover:underline">Make Assistant</button>
+                                    )}
+                                    {isLeader && player.userRole === 'AssistantLeader' && (
+                                        <>
+                                            <button onClick={() => handleHandoverLeadership(player.userId!)} className="text-sm text-green-200 hover:underline">Make Leader</button>
+                                            <button onClick={() => demoteMutation.mutate({ teamId, userId: player.userId! })} className="text-sm text-yellow-200 hover:underline">Demote</button>
+                                        </>
                                     )}
 
                                     {isAdmin ? (
                                         <>
-                                            <button
-                                                onClick={() => handleRemove(player.id)}
-                                                className="text-sm text-yellow-200 hover:underline"
-                                            >
-                                                Remove from Roster
-                                            </button>
-                                            <button
-                                                onClick={() => handleDelete(player.id)}
-                                                className="text-sm text-red-300 hover:underline"
-                                            >
-                                                Delete Permanently
-                                            </button>
+                                            <button onClick={() => handleRemove(player.id)} className="text-sm text-yellow-200 hover:underline">Remove</button>
+                                            <button onClick={() => handleDelete(player.id)} className="text-sm text-red-300 hover:underline">Delete</button>
                                         </>
                                     ) : (
-                                        <button
-                                            onClick={() => handleRemove(player.id)}
-                                            className="px-2 py-1 text-xs font-medium text-red-700 bg-red-100 rounded hover:bg-red-200"
-                                        >
+                                        <button onClick={() => handleRemove(player.id)} className="px-2 py-1 text-xs font-medium text-red-700 bg-red-100 rounded hover:bg-red-200">
                                             Remove
                                         </button>
                                     )}

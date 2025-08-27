@@ -52,6 +52,11 @@ public class TeamMembershipService : ITeamMembershipService
         {
             throw new UnauthorizedAccessException("Only the Team Leader can change member roles.");
         }
+        
+        if (actorMembership.UserId == memberUserId)
+        {
+            throw new InvalidOperationException("A leader cannot change their own role. Please use the 'Hand Over Leadership' feature.");
+        }
 
         var targetMembership = await _context.TeamMemberships
             .Include(m => m.User)

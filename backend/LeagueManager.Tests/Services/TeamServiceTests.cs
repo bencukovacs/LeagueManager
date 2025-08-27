@@ -325,7 +325,7 @@ public class TeamServiceTests : IDisposable
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.LeaveMyTeamAsync());
-        Assert.Equal("You are the last manager of this team. You must transfer leadership before leaving.", exception.Message);
+        Assert.Equal("You are the last leader of this team. You must transfer leadership before leaving.", exception.Message);
     }
 
     [Fact]

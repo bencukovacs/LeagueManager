@@ -284,16 +284,14 @@ public class TeamService : ITeamService
 
                 foreach (var player in roster)
                 {
-                    if (player.UserId == null)
-                    {
-                        _context.Players.Remove(player);
-                    }
-                    else
-                    {
-                        player.TeamId = null;
-                    }
+                    if (player.UserId == null) _context.Players.Remove(player);
+                    else player.TeamId = null;
                 }
                 _context.Teams.Remove(membership.Team);
+            }
+            else
+            {
+                _context.TeamMemberships.Remove(membership);
             }
         }
         // Scenario 2: The team is already approved
@@ -305,11 +303,11 @@ public class TeamService : ITeamService
                 var otherManagers = await _context.TeamMemberships.AnyAsync(m =>
                     m.TeamId == membership.TeamId &&
                     m.UserId != currentUserId &&
-                    (m.Role == TeamRole.Leader || m.Role == TeamRole.AssistantLeader));
+                    m.Role == TeamRole.Leader);
 
                 if (!otherManagers)
                 {
-                    throw new InvalidOperationException("You are the last manager of this team. You must transfer leadership before leaving.");
+                    throw new InvalidOperationException("You are the last leader of this team. You must transfer leadership before leaving.");
                 }
             }
             // For any role (Member, Assistant, or a Leader who is NOT the last one), just remove the membership.

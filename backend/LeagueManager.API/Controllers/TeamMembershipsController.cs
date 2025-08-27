@@ -1,5 +1,6 @@
 using LeagueManager.Application.Dtos;
 using LeagueManager.Application.Services;
+using LeagueManager.Domain.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -38,6 +39,26 @@ public class TeamMembershipsController : ControllerBase
             return Forbid();
         }
 
+        var updatedMember = await _membershipService.UpdateMemberRoleAsync(teamId, userId, dto);
+        if (updatedMember == null)
+        {
+            return NotFound("Team membership not found.");
+        }
+
+        return Ok(updatedMember);
+    }
+    
+    // Add this new endpoint to your controller
+    [HttpPatch("{userId}/demote")]
+    public async Task<IActionResult> DemoteMember(int teamId, string userId)
+    {
+        var authorizationResult = await _authorizationService.AuthorizeAsync(User, teamId, "CanManageTeam");
+        if (!authorizationResult.Succeeded)
+        {
+            return Forbid();
+        }
+
+        var dto = new UpdateTeamMemberRoleDto { NewRole = TeamRole.Member };
         var updatedMember = await _membershipService.UpdateMemberRoleAsync(teamId, userId, dto);
         if (updatedMember == null)
         {
