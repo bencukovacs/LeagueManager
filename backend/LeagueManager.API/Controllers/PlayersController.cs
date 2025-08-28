@@ -78,8 +78,15 @@ public class PlayersController : ControllerBase
             return Forbid();
         }
 
-        await _playerService.RemovePlayerFromRosterAsync(id);
-        return NoContent();
+        try
+        {
+            await _playerService.RemovePlayerFromRosterAsync(id);
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 
     [HttpDelete("{id}")]

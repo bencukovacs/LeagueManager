@@ -30,6 +30,7 @@ public class LeagueConfigurationControllerTests
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
         var returnedConfig = Assert.IsType<LeagueConfigurationDto>(okResult.Value);
+
         Assert.Equal(5, returnedConfig.MinPlayersPerTeam);
     }
 
@@ -37,15 +38,18 @@ public class LeagueConfigurationControllerTests
     public async Task UpdateConfiguration_WithValidDto_ReturnsOkResultWithUpdatedConfig()
     {
         // Arrange
-        var configDto = new LeagueConfigurationDto { MinPlayersPerTeam = 7 };
-        _mockConfigService.Setup(s => s.UpdateConfigurationAsync(configDto)).ReturnsAsync(configDto);
+        var inputDto = new LeagueConfigurationDto { MinPlayersPerTeam = 7 };
+        var updatedDto = new LeagueConfigurationDto { MinPlayersPerTeam = 7 };
+
+        _mockConfigService.Setup(s => s.UpdateConfigurationAsync(inputDto)).ReturnsAsync(updatedDto);
 
         // Act
-        var result = await _controller.UpdateConfiguration(configDto);
+        var result = await _controller.UpdateConfiguration(inputDto);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
         var returnedConfig = Assert.IsType<LeagueConfigurationDto>(okResult.Value);
+
         Assert.Equal(7, returnedConfig.MinPlayersPerTeam);
     }
 }

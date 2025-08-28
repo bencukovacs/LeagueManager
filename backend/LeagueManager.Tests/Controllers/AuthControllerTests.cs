@@ -74,17 +74,18 @@ public class AuthControllerTests
         var value = okResult.Value;
         Assert.NotNull(value);
         var tokenProperty = value.GetType().GetProperty("Token");
+        var tokenObj = Assert.IsAssignableFrom<object>(okResult.Value);
+        Assert.Equal(fakeToken, tokenObj.GetType().GetProperty("Token")!.GetValue(tokenObj));
         Assert.NotNull(tokenProperty);
         Assert.Equal(fakeToken, tokenProperty.GetValue(value, null));
     }
 
     [Fact]
-    public async Task Login_WhenCredentialsAreInvalid_ReturnsUnauthorized()
+    public async Task Login_WhenCredentialsAreInvalid_ReturnsUnauthorizedWithMessage()
     {
         // Arrange
         var loginDto = new LoginDto { Email = "test@test.com", Password = "WrongPassword!" };
 
-        // Mock a failed login that returns null
         _mockAuthService
             .Setup(s => s.LoginUserAsync(loginDto))
             .ReturnsAsync((string?)null);
@@ -93,6 +94,35 @@ public class AuthControllerTests
         var result = await _controller.Login(loginDto);
 
         // Assert
-        Assert.IsType<UnauthorizedObjectResult>(result);
+        var unauthorizedResult = Assert.IsType<UnauthorizedObjectResult>(result);
+
+        var value = unauthorizedResult.Value;
+        Assert.NotNull(value);
+
+        var messageProp = value.GetType().GetProperty("Message");
+        Assert.NotNull(messageProp);
+        Assert.Equal("Invalid credentials", messageProp.GetValue(value, null));
     }
+
+    
+    [Fact]
+    public async Task Register_WhenSuccessful_ReturnsSuccessMessage()
+    {
+        // Arrange
+        var dto = new RegisterDto { FirstName = "T", LastName = "U", Email = "t@t.com", Password = "Pass123!" };
+        _mockAuthService.Setup(s => s.RegisterUserAsync(dto))
+            .ReturnsAsync(IdentityResult.Success);
+
+        // Act
+        var result = await _controller.Register(dto);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var value = okResult.Value;
+        Assert.NotNull(value);
+        var messageProp = value.GetType().GetProperty("Message");
+        Assert.NotNull(messageProp);
+        Assert.Equal("User registered successfully", messageProp.GetValue(value, null));
+    }
+
 }
