@@ -42,6 +42,11 @@ public class PlayersController : ControllerBase
     [Authorize]
     public async Task<IActionResult> CreatePlayer([FromBody] PlayerDto playerDto)
     {
+        var authorizationResult = await _authorizationService.AuthorizeAsync(User, playerDto.TeamId, "CanEditRoster");
+        if (!authorizationResult.Succeeded)
+        {
+            return Forbid();
+        }
         try
         {
             var newPlayer = await _playerService.CreatePlayerAsync(playerDto);
@@ -67,7 +72,7 @@ public class PlayersController : ControllerBase
         }
 
         // Authorization: Can the current user manage this player's team?
-        var authorizationResult = await _authorizationService.AuthorizeAsync(User, player.TeamId, "CanManageTeam");
+        var authorizationResult = await _authorizationService.AuthorizeAsync(User, player.TeamId, "CanEditRoster");
         if (!authorizationResult.Succeeded)
         {
             return Forbid();

@@ -105,7 +105,9 @@ builder.Services.AddAuthorizationBuilder()
     .AddPolicy("CanUpdatePlayer", policy =>
         policy.AddRequirements(new CanUpdatePlayerRequirement()))
     .AddPolicy("CanSubmitResult", policy =>
-        policy.AddRequirements(new CanSubmitResultRequirement()));
+        policy.AddRequirements(new CanSubmitResultRequirement()))
+    .AddPolicy("CanEditRoster", policy =>
+        policy.AddRequirements(new CanEditRosterRequirement()));
 
 
 

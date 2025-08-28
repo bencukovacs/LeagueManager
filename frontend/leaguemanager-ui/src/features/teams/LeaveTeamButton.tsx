@@ -3,27 +3,28 @@ import apiClient from '../../api/apiClient';
 
 interface LeaveTeamButtonProps {
     teamStatus: 'PendingApproval' | 'Approved' | 'Rejected';
+    userRole: 'Leader' | 'AssistantLeader' | 'Member'; // 1. Add the new prop
 }
 
-// API function to leave the team
 const leaveMyTeam = async () => {
     await apiClient.delete('/my-team');
 };
 
-export default function LeaveTeamButton({ teamStatus }: LeaveTeamButtonProps) {
+export default function LeaveTeamButton({ teamStatus, userRole }: LeaveTeamButtonProps) {
     const queryClient = useQueryClient();
 
     const mutation = useMutation({
         mutationFn: leaveMyTeam,
         onSuccess: () => {
-            // When the user leaves, we must refetch the data for both the page and the navbar
             queryClient.invalidateQueries({ queryKey: ['myTeamAndConfig'] });
             queryClient.invalidateQueries({ queryKey: ['myTeamStatus'] });
         },
     });
 
-    const buttonText = teamStatus === 'PendingApproval' ? 'Cancel Application' : 'Leave Team';
-    const confirmMessage = teamStatus === 'PendingApproval'
+    // 2. The logic now checks both the team status and the user's role.
+    const isLeaderOfPendingTeam = userRole === 'Leader' && teamStatus === 'PendingApproval';
+    const buttonText = isLeaderOfPendingTeam ? 'Cancel Application' : 'Leave Team';
+    const confirmMessage = isLeaderOfPendingTeam
         ? 'Are you sure you want to cancel your team application? This will permanently delete the team.'
         : 'Are you sure you want to leave this team?';
 

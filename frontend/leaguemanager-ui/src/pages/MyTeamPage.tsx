@@ -136,7 +136,20 @@ export default function MyTeamPage() {
         </div>
           <div className="flex space-x-2">
               {isLeader && team.status === 'Approved' && <DisbandTeamButton />}
-              <LeaveTeamButton teamStatus={team.status as 'PendingApproval' | 'Approved'} />
+
+              {isLeader && team.status === 'PendingApproval' &&
+                  <LeaveTeamButton
+                      teamStatus={team.status as 'PendingApproval' | 'Approved'}
+                      userRole={userRole}
+                  />
+              }
+
+              {!isLeader &&
+                  <LeaveTeamButton
+                      teamStatus={team.status as 'PendingApproval' | 'Approved'}
+                      userRole={userRole}
+                  />
+              }
           </div>
       </div>
       
