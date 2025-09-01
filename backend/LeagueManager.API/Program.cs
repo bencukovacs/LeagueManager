@@ -142,6 +142,7 @@ builder.Services.AddAutoMapper(typeof(MappingProfile));
 builder.Services.AddScoped<IAuthorizationHandler, CanManageTeamHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, CanUpdatePlayerHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, CanSubmitResultHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, CanEditRosterHandler>();
 
 var app = builder.Build();
 
