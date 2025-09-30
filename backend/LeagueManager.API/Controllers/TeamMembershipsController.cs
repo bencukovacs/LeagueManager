@@ -14,7 +14,8 @@ public class TeamMembershipsController : ControllerBase
     private readonly ITeamMembershipService _membershipService;
     private readonly IAuthorizationService _authorizationService;
 
-    public TeamMembershipsController(ITeamMembershipService membershipService, IAuthorizationService authorizationService)
+    public TeamMembershipsController(ITeamMembershipService membershipService,
+        IAuthorizationService authorizationService)
     {
         _membershipService = membershipService;
         _authorizationService = authorizationService;
@@ -47,7 +48,7 @@ public class TeamMembershipsController : ControllerBase
 
         return Ok(updatedMember);
     }
-    
+
     // Add this new endpoint to your controller
     [HttpPatch("{userId}/demote")]
     public async Task<IActionResult> DemoteMember(int teamId, string userId)

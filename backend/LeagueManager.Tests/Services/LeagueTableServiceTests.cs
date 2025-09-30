@@ -50,9 +50,9 @@ public class LeagueTableServiceTests : IDisposable
         // --- ARRANGE ---
         await using var context = GetDbContext();
 
-        var teamA = new Team { Id = 1, Name = "Team A" };
-        var teamB = new Team { Id = 2, Name = "Team B" };
-        var teamC = new Team { Id = 3, Name = "Team C" };
+        var teamA = new Team { Id = 1, Name = "Team A", Status = TeamStatus.Approved };
+        var teamB = new Team { Id = 2, Name = "Team B", Status = TeamStatus.Approved };
+        var teamC = new Team { Id = 3, Name = "Team C", Status = TeamStatus.Approved };
         context.Teams.AddRange(teamA, teamB, teamC);
 
         var fixture1 = new Fixture { Id = 1, HomeTeamId = 1, AwayTeamId = 2 };
@@ -86,7 +86,7 @@ public class LeagueTableServiceTests : IDisposable
         // --- ARRANGE ---
         await using var context = GetDbContext();
         
-        var teamA = new Team { Id = 1, Name = "Team A" };
+        var teamA = new Team { Id = 1, Name = "Team A", Status = TeamStatus.Approved };
         context.Teams.Add(teamA);
         await context.SaveChangesAsync();
         
@@ -108,8 +108,8 @@ public class LeagueTableServiceTests : IDisposable
         // --- ARRANGE ---
         await using var context = GetDbContext();
         
-        var teamA = new Team { Id = 1, Name = "Team A" };
-        var teamB = new Team { Id = 2, Name = "Team B" };
+        var teamA = new Team { Id = 1, Name = "Team A", Status = TeamStatus.Approved };
+        var teamB = new Team { Id = 2, Name = "Team B", Status = TeamStatus.Approved };
         context.Teams.AddRange(teamA, teamB);
 
         var fixture1 = new Fixture { Id = 1, HomeTeamId = 1, AwayTeamId = 2 };
@@ -137,9 +137,9 @@ public class LeagueTableServiceTests : IDisposable
         // --- ARRANGE ---
         await using var context = GetDbContext();
         
-        var teamA = new Team { Id = 1, Name = "Team A" }; // GD = +1 (2-1 win)
-        var teamB = new Team { Id = 2, Name = "Team B" }; // GD = +2 (3-1 win)
-        var teamC = new Team { Id = 3, Name = "Team C" };
+        var teamA = new Team { Id = 1, Name = "Team A", Status = TeamStatus.Approved }; // GD = +1 (2-1 win)
+        var teamB = new Team { Id = 2, Name = "Team B", Status = TeamStatus.Approved }; // GD = +2 (3-1 win)
+        var teamC = new Team { Id = 3, Name = "Team C", Status = TeamStatus.Approved };
         context.Teams.AddRange(teamA, teamB, teamC);
 
         var fixture1 = new Fixture { Id = 1, HomeTeamId = 1, AwayTeamId = 3 }; // A vs C

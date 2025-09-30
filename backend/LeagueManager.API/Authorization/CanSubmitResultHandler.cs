@@ -1,4 +1,5 @@
 using LeagueManager.Domain.Models;
+using LeagueManager.Application.Dtos;
 using LeagueManager.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -6,7 +7,7 @@ using System.Security.Claims;
 
 namespace LeagueManager.API.Authorization;
 
-public class CanSubmitResultHandler : AuthorizationHandler<CanSubmitResultRequirement, Fixture>
+public class CanSubmitResultHandler : AuthorizationHandler<CanSubmitResultRequirement, FixtureResponseDto>
 {
     private readonly LeagueDbContext _context;
 
@@ -18,7 +19,7 @@ public class CanSubmitResultHandler : AuthorizationHandler<CanSubmitResultRequir
     protected override async Task HandleRequirementAsync(
         AuthorizationHandlerContext context,
         CanSubmitResultRequirement requirement,
-        Fixture fixture) // The resource is the Fixture object
+        FixtureResponseDto fixture) // The resource is the Fixture DTO passed by the controller
     {
         // Rule 1: Is the user a global Admin?
         if (context.User.IsInRole("Admin"))
@@ -35,7 +36,7 @@ public class CanSubmitResultHandler : AuthorizationHandler<CanSubmitResultRequir
 
         // Rule 2: Check if the user is a manager of either the home or away team.
         var isTeamManager = await _context.TeamMemberships
-            .AnyAsync(m => (m.TeamId == fixture.HomeTeamId || m.TeamId == fixture.AwayTeamId) &&
+            .AnyAsync(m => (m.TeamId == fixture.HomeTeam.Id || m.TeamId == fixture.AwayTeam.Id) &&
                            m.UserId == userId &&
                            (m.Role == TeamRole.Leader || m.Role == TeamRole.AssistantLeader));
 

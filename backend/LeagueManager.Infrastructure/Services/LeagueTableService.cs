@@ -17,7 +17,12 @@ public class LeagueTableService : ILeagueTableService
 
     public async Task<IEnumerable<TeamStatsDto>> GetLeagueTableAsync()
     {
-        var teams = await _context.Teams.ToListAsync();
+        // Only include approved teams in the league table
+        var teams = await _context.Teams
+            .Where(t => t.Status == TeamStatus.Approved)
+            .ToListAsync();
+
+        var approvedTeamIds = teams.Select(t => t.Id).ToHashSet();
         var approvedResults = await _context.Results
             .Where(r => r.Status == ResultStatus.Approved)
             .Include(r => r.Fixture)
@@ -27,8 +32,18 @@ public class LeagueTableService : ILeagueTableService
 
         foreach (var result in approvedResults)
         {
-            var homeTeamStats = stats.First(s => s.TeamName == teams.First(t => t.Id == result.Fixture!.HomeTeamId).Name);
-            var awayTeamStats = stats.First(s => s.TeamName == teams.First(t => t.Id == result.Fixture!.AwayTeamId).Name);
+            // Skip any result that involves a team that is not approved
+            var homeTeamId = result.Fixture!.HomeTeamId;
+            var awayTeamId = result.Fixture!.AwayTeamId;
+            if (!approvedTeamIds.Contains(homeTeamId) || !approvedTeamIds.Contains(awayTeamId))
+            {
+                continue;
+            }
+
+            var homeTeamName = teams.First(t => t.Id == homeTeamId).Name;
+            var awayTeamName = teams.First(t => t.Id == awayTeamId).Name;
+            var homeTeamStats = stats.First(s => s.TeamName == homeTeamName);
+            var awayTeamStats = stats.First(s => s.TeamName == awayTeamName);
 
             homeTeamStats.Played++;
             awayTeamStats.Played++;

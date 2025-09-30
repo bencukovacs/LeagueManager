@@ -25,6 +25,7 @@ public class MyTeamController : ControllerBase
             // This means the user is logged in but is not a leader of any team
             return NotFound("You do not currently have a team.");
         }
+
         return Ok(data);
     }
 
@@ -34,7 +35,7 @@ public class MyTeamController : ControllerBase
         var fixtures = await _teamService.GetFixturesForMyTeamAsync();
         return Ok(fixtures);
     }
-    
+
     [HttpDelete]
     public async Task<IActionResult> LeaveMyTeam()
     {
@@ -49,7 +50,7 @@ public class MyTeamController : ControllerBase
             return BadRequest(ex.Message);
         }
     }
-    
+
     [HttpDelete("disband")]
     public async Task<IActionResult> DisbandMyTeam()
     {

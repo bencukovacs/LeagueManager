@@ -33,6 +33,7 @@ public class LocationsController : ControllerBase
         {
             return NotFound();
         }
+
         return Ok(location);
     }
 
@@ -53,6 +54,7 @@ public class LocationsController : ControllerBase
         {
             return NotFound();
         }
+
         return NoContent();
     }
 
@@ -65,6 +67,7 @@ public class LocationsController : ControllerBase
         {
             return NotFound();
         }
+
         return NoContent();
     }
 }

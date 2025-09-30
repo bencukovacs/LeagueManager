@@ -24,18 +24,18 @@ const string MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Host.UseSerilog((context, configuration) => 
+builder.Host.UseSerilog((context, configuration) =>
     configuration.ReadFrom.Configuration(context.Configuration));
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(name: MyAllowSpecificOrigins,
-                      policy =>
-                      {
-                          policy.WithOrigins("http://localhost:5173") // Your React app's address
-                                .AllowAnyHeader()
-                                .AllowAnyMethod();
-                      });
+        policy =>
+        {
+            policy.WithOrigins("http://localhost:5173") // Your React app's address
+                .AllowAnyHeader()
+                .AllowAnyMethod();
+        });
 });
 
 builder.Services.AddEndpointsApiExplorer();
@@ -66,7 +66,8 @@ builder.Services.AddSwaggerGen(options =>
         }
     });
 });
-builder.Services.AddDbContext<LeagueDbContext>(options => options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddDbContext<LeagueDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddIdentity<User, IdentityRole>()
     .AddEntityFrameworkStores<LeagueDbContext>()
@@ -79,25 +80,25 @@ builder.Services.AddOptions<JwtSettings>()
 
 
 builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()!;
-
-    options.TokenValidationParameters = new TokenValidationParameters
     {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer = jwtSettings.Issuer,
-        ValidAudience = jwtSettings.Audience,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key))
-    };
-});
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()!;
+
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtSettings.Issuer,
+            ValidAudience = jwtSettings.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key))
+        };
+    });
 
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy("CanManageTeam", policy =>
@@ -108,7 +109,6 @@ builder.Services.AddAuthorizationBuilder()
         policy.AddRequirements(new CanSubmitResultRequirement()))
     .AddPolicy("CanEditRoster", policy =>
         policy.AddRequirements(new CanEditRosterRequirement()));
-
 
 
 builder.Services.AddControllers();
@@ -162,10 +162,12 @@ using (var scope = app.Services.CreateScope())
         // Define a retry policy: try 5 times, waiting 5 seconds between each attempt.
         var retryPolicy = Policy
             .Handle<NpgsqlException>() // Only retry on a Postgres connection error
-            .WaitAndRetryAsync(5, RetryAttempt => 
+            .WaitAndRetryAsync(5, RetryAttempt =>
             {
                 var TimeToWait = TimeSpan.FromSeconds(Math.Pow(2, RetryAttempt));
-                logger.LogWarning("Database connection failed. Waiting {TimeToWait} before next retry. Attempt {RetryAttempt}", TimeToWait, RetryAttempt);
+                logger.LogWarning(
+                    "Database connection failed. Waiting {TimeToWait} before next retry. Attempt {RetryAttempt}",
+                    TimeToWait, RetryAttempt);
                 return TimeToWait;
             });
 
@@ -173,12 +175,12 @@ using (var scope = app.Services.CreateScope())
         await retryPolicy.ExecuteAsync(async () =>
         {
             logger.LogInformation("Starting database setup (migrations and seeding)...");
-            
+
             var dbContext = services.GetRequiredService<LeagueDbContext>();
             await dbContext.Database.MigrateAsync();
-            
+
             await DbSeeder.SeedRolesAndAdminAsync(services);
-            
+
             logger.LogInformation("Database setup completed successfully.");
         });
     }

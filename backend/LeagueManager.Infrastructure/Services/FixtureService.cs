@@ -211,11 +211,13 @@ public class FixtureService : IFixtureService
         var playerIds = resultDto.Goalscorers.Select(g => g.PlayerId).ToList();
         if (!playerIds.Any()) return;
 
+        var uniquePlayerIds = playerIds.Distinct().ToList();
+
         var validPlayersCount = await _context.Players
-            .CountAsync(p => playerIds.Contains(p.Id) &&
+            .CountAsync(p => uniquePlayerIds.Contains(p.Id) &&
                             (p.TeamId == fixture.HomeTeamId || p.TeamId == fixture.AwayTeamId));
 
-        if (validPlayersCount != playerIds.Count)
+        if (validPlayersCount != uniquePlayerIds.Count)
         {
             throw new InvalidOperationException("One or more goalscorer IDs are invalid or do not belong to the competing teams.");
         }
@@ -277,11 +279,17 @@ public class FixtureService : IFixtureService
 
     private async Task AddMomVoteAsync(SubmitResultDto resultDto, int fixtureId, string currentUserId)
     {
-        var votingTeam = await _context.TeamMemberships.FirstAsync(m => m.UserId == currentUserId);
+        // Ensure we attribute the vote to the user's team that is actually playing in this fixture
+        var fixture = await _context.Fixtures.FirstAsync(f => f.Id == fixtureId);
+
+        var votingMembership = await _context.TeamMemberships.FirstAsync(m =>
+            m.UserId == currentUserId &&
+            (m.TeamId == fixture.HomeTeamId || m.TeamId == fixture.AwayTeamId));
+
         var momVote = new MomVote
         {
             FixtureId = fixtureId,
-            VotingTeamId = votingTeam.Id,
+            VotingTeamId = votingMembership.TeamId,
             VotedForOwnPlayerId = resultDto.MomVote!.VotedForOwnPlayerId,
             VotedForOpponentPlayerId = resultDto.MomVote.VotedForOpponentPlayerId
         };

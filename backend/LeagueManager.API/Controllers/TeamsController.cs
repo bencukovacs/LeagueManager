@@ -14,7 +14,8 @@ public class TeamsController : ControllerBase
     private readonly IPlayerService _playerService;
     private readonly IAuthorizationService _authorizationService;
 
-    public TeamsController(ITeamService teamService, IPlayerService playerService, IAuthorizationService authorizationService)
+    public TeamsController(ITeamService teamService, IPlayerService playerService,
+        IAuthorizationService authorizationService)
     {
         _teamService = teamService;
         _playerService = playerService;
@@ -44,6 +45,7 @@ public class TeamsController : ControllerBase
         {
             return NotFound();
         }
+
         return Ok(team);
     }
 
@@ -81,6 +83,7 @@ public class TeamsController : ControllerBase
             {
                 return NotFound("Team not found.");
             }
+
             return Ok(team);
         }
         catch (InvalidOperationException ex)
@@ -107,6 +110,7 @@ public class TeamsController : ControllerBase
         {
             return NotFound();
         }
+
         return NoContent();
     }
 
@@ -119,6 +123,7 @@ public class TeamsController : ControllerBase
         {
             return NotFound();
         }
+
         return NoContent();
     }
 

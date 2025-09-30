@@ -35,6 +35,7 @@ public class PlayersController : ControllerBase
         {
             return NotFound();
         }
+
         return Ok(player);
     }
 
@@ -47,13 +48,20 @@ public class PlayersController : ControllerBase
         {
             return Forbid();
         }
+
         try
         {
             var newPlayer = await _playerService.CreatePlayerAsync(playerDto);
             return CreatedAtAction(nameof(GetPlayer), new { id = newPlayer.Id }, newPlayer);
         }
-        catch (ArgumentException ex) { return BadRequest(ex.Message); }
-        catch (InvalidOperationException ex) { return BadRequest(ex.Message); }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
         catch (UnauthorizedAccessException ex)
         {
             // Return a 403 Forbidden status with a custom error object
@@ -98,9 +106,9 @@ public class PlayersController : ControllerBase
             await _playerService.DeletePlayerPermanentlyAsync(id);
             return NoContent();
         }
-        catch (KeyNotFoundException ex) 
-        { 
-            return NotFound(ex.Message); 
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ex.Message);
         }
         catch (InvalidOperationException ex)
         {
@@ -118,7 +126,8 @@ public class PlayersController : ControllerBase
             return NotFound();
         }
 
-        var authorizationResult = await _authorizationService.AuthorizeAsync(User, playerDomainModel, "CanUpdatePlayer");
+        var authorizationResult =
+            await _authorizationService.AuthorizeAsync(User, playerDomainModel, "CanUpdatePlayer");
         if (!authorizationResult.Succeeded)
         {
             return Forbid();
@@ -135,7 +144,7 @@ public class PlayersController : ControllerBase
         var players = await _playerService.GetUnassignedPlayersAsync();
         return Ok(players);
     }
-    
+
     [HttpPatch("{playerId}/assign/{teamId}")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> AssignPlayerToTeam(int playerId, int teamId)
@@ -145,7 +154,7 @@ public class PlayersController : ControllerBase
         {
             return NotFound("Player or Team not found.");
         }
+
         return Ok(updatedPlayer);
     }
-    
 }

@@ -35,6 +35,7 @@ public class FixturesController : ControllerBase
         {
             return NotFound();
         }
+
         return Ok(fixture);
     }
 
@@ -107,6 +108,7 @@ public class FixturesController : ControllerBase
             {
                 return NotFound();
             }
+
             return NoContent();
         }
         catch (ArgumentException ex)
@@ -124,6 +126,7 @@ public class FixturesController : ControllerBase
         {
             return NotFound();
         }
+
         return NoContent();
     }
 }
